@@ -28,34 +28,26 @@ Run composer update to download the package
 php composer.phar update
 ```
 
-Open config/app.php and register the required service provider  (Laravel 5.x)
+Open config/app.php and register the required service provider
 
 ```
 'providers' => [
-    LocalDynamics\Revisionable\RevisionableServiceProvider::class,
+    LocalDynamics\Revisionable\ServiceProvider::class,
 ]
 ```
 
-Publish the configuration and migrations (Laravel 5.x)
+Publish the configuration and migrations
 
 ```
-php artisan vendor:publish --provider="LocalDynamics\Revisionable\RevisionableServiceProvider"
+php artisan vendor:publish --provider="LocalDynamics\Revisionable\ServiceProvider"
 ```
 
-Finally, you'll also need to run migration on the package (Laravel 5.x)
+Finally, you'll also need to run migration on the package
 
 ```
 php artisan migrate
 ```
 
-For Laravel 4.x users:
-```
-php artisan migrate --package=LocalDynamics/revisionable
-```
-
-> If you're going to be migrating up and down completely a lot (using `migrate:refresh`), one thing you can do instead is to copy the migration file from the package to your `app/database` folder, and change the classname from `CreateRevisionsTable` to something like `CreateRevisionTable` (without the 's', otherwise you'll get an error saying there's a duplicate class)
-
-> `cp vendor/LocalDynamics/revisionable/src/migrations/2013_04_09_062329_create_revisions_table.php database/migrations/`
 
 ## Docs
 
@@ -74,7 +66,7 @@ For any model that you want to keep a revision history for, include the `LocalDy
 ```php
 namespace App;
 
-use \LocalDynamics\Revisionable\IsRevisionable;
+use \LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
 class Article extends \Illuminate\Database\Eloquent\Model {
 
@@ -91,10 +83,12 @@ If needed, you can disable the revisioning by setting `$revisionEnabled` to fals
 ```php
 namespace App;
 
-use \LocalDynamics\Revisionable\IsRevisionable;
+use \LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
 class Article extends \Illuminate\Database\Eloquent\Model {
-
+    
+    use IsRevisionable;
+    
     protected $revisionEnabled = false;
 
 }
@@ -105,10 +99,12 @@ You can also disable revisioning after X many revisions have been made by settin
 ```php
 namespace App;
 
-use \LocalDynamics\Revisionable\IsRevisionable;
+use \LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
 class Article extends \Illuminate\Database\Eloquent\Model {
-
+    
+    use IsRevisionable;
+    
     protected $revisionEnabled = true;
     protected $historyLimit = 500; //Stop tracking revisions after 500 changes have been made.
 
@@ -119,10 +115,12 @@ In order to maintain a limit on history, but instead of stopping tracking revisi
 ```php
 namespace App;
 
-use \LocalDynamics\Revisionable\IsRevisionable;
+use \LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
 class Article extends \Illuminate\Database\Eloquent\Model {
-
+    
+    use IsRevisionable;
+    
     protected $revisionEnabled = true;
     protected $revisionCleanup = true; //Remove old revisions (works only when used with $historyLimit)
     protected $historyLimit = 500; //Maintain a maximum of 500 changes at any point of time, while cleaning up old revisions.
@@ -148,6 +146,7 @@ If you want to store the creation as a revision you can override this behavior b
 ```php
 protected $revisionCreationsEnabled = true;
 ```
+
 
 ## More Control
 
@@ -179,7 +178,7 @@ public function boot()
 {
     parent::boot();
 
-    $events->listen('revisionable.*', function($model, $revisions) {
+    Event::listen('revisionable.*', function($model, $revisions) {
         // Do something with the revisions or the changed model. 
         dd($model, $revisions);
     });
@@ -281,6 +280,7 @@ The above would be the result from this:
 ```
 
 If you have enabled revisions of creations as well you can display it like this:
+
 ```php
 @foreach($resource->revisionHistory as $history)
   @if($history->key == 'created_at' && !$history->old_value)
@@ -310,10 +310,11 @@ This is used when the value (old or new) is the id of a foreign key relationship
 By default, it simply returns the ID of the model that was updated. It is up to you to override this method in your own models to return something meaningful. e.g.,
 
 ```php
-use LocalDynamics\Revisionable\Revisionable;
+use LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
-class Article extends Revisionable
+class Article
 {
+    use IsRevisionable; // <- optional
 
     public function identifiableName()
     {
@@ -340,6 +341,7 @@ protected $revisionUnknownString = 'unknown';
 
 
 ### disableRevisionField()
+
 Sometimes temporarily disabling a revisionable field can come in handy, if you want to be able to save an update however don't need to keep a record of the changes.
 
 ```php

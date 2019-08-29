@@ -9,17 +9,12 @@ use Orchestra\Testbench\TestCase;
 
 class RevisionTest extends TestCase
 {
-    /**
-     * Setup the test environment.
-     */
     protected function setUp() : void
     {
         parent::setUp();
 
         $this->loadLaravelMigrations(['--database' => 'testing']);
 
-        // call migrations specific to our tests, e.g. to seed the db
-        // the path option should be an absolute path.
         $this->loadMigrationsFrom([
             '--database' => 'testing',
             '--path'     => realpath(__DIR__ . '/../src/migrations'),
@@ -31,10 +26,8 @@ class RevisionTest extends TestCase
         ]);
     }
 
-    /**
-     * Test we can interact with the database
-     */
-    public function testUsersTable()
+    /** @test */
+    public function user_table_is_working()
     {
         User::create([
             'name'     => 'James Judd',
@@ -47,10 +40,8 @@ class RevisionTest extends TestCase
         $this->assertTrue(Hash::check('456', $users->password));
     }
 
-    /**
-     * Test we can interact with the database
-     */
-    public function testUsersSettingArray()
+    /** @test */
+    public function user_setting_is_an_array()
     {
         User::create([
             'name'     => 'James Judd',
@@ -72,10 +63,8 @@ class RevisionTest extends TestCase
         $this->assertArrayHasKey('settingC', $users->settings);
     }
 
-    /**
-     * Make sure revisions are created
-     */
-    public function testRevisionsStored()
+    /** @test */
+    public function revisions_get_stored()
     {
         $user = User::create([
             'name'     => 'James Judd',
@@ -97,10 +86,8 @@ class RevisionTest extends TestCase
         $this->assertCount(2, $user->revisionHistory);
     }
 
-    /**
-     * Make sure revisions are created
-     */
-    public function testArrayRevisionsStored()
+    /** @test */
+    public function revisions_of_array_fields_get_stored()
     {
         $user = User::create([
             'name'     => 'James Judd',

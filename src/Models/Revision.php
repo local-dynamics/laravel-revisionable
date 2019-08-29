@@ -1,10 +1,11 @@
 <?php
 
-namespace LocalDynamics\Revisionable;
+namespace LocalDynamics\Revisionable\Models;
 
 use Exception;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Support\Str;
+use LocalDynamics\Revisionable\FieldFormatter;
 
 /**
  * Revision.
@@ -16,65 +17,33 @@ use Illuminate\Support\Str;
  */
 class Revision extends Eloquent
 {
-    /**
-     * @var string
-     */
     public $table = 'revisions';
-
-    /**
-     * @var array
-     */
     protected $revisionFormattedFields = [];
 
-    /**
-     * @param array $attributes
-     */
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
     }
 
-    /**
-     * Revisionable.
-     *
-     * Grab the revision history for the model that is calling
-     *
-     * @return array revision history
-     */
     public function revisionable()
     {
         return $this->morphTo();
     }
 
-    /**
-     * Field Name
-     *
-     * Returns the field that was updated, in the case that it's a foreign key
-     * denoted by a suffix of "_id", then "_id" is simply stripped
-     *
-     * @return string field
-     */
-    public function fieldName()
+    public function fieldName() : string
     {
         if ($formatted = $this->formatFieldName($this->key)) {
             return $formatted;
-        } elseif (strpos($this->key, '_id')) {
-            return str_replace('_id', '', $this->key);
-        } else {
-            return $this->key;
         }
+
+        if (strpos($this->key, '_id')) {
+            return str_replace('_id', '', $this->key);
+        }
+
+        return $this->key;
     }
 
-    /**
-     * Format field name.
-     *
-     * Allow overrides for field names.
-     *
-     * @param $key
-     *
-     * @return bool
-     */
-    private function formatFieldName($key)
+    private function formatFieldName($key) : bool
     {
         $related_model = $this->getActualClassNameForMorph($this->revisionable_type);
         $related_model = new $related_model();
@@ -87,28 +56,12 @@ class Revision extends Eloquent
         return false;
     }
 
-    /**
-     * Old Value.
-     *
-     * Grab the old value of the field, if it was a foreign key
-     * attempt to get an identifying name for the model.
-     *
-     * @return string old value
-     */
-    public function oldValue()
+    public function oldValue() : string
     {
         return $this->getValue('old');
     }
 
-    /**
-     * Responsible for actually doing the grunt work for getting the
-     * old or new value for the revision.
-     *
-     * @param string $which old or new
-     *
-     * @return string value
-     */
-    private function getValue($which = 'new')
+    private function getValue(string $which = 'new') : string
     {
         $which_value = $which . '_value';
 
@@ -174,12 +127,7 @@ class Revision extends Eloquent
         return $this->format($this->key, $this->$which_value);
     }
 
-    /**
-     * Return true if the key is for a related model.
-     *
-     * @return bool
-     */
-    private function isRelated()
+    private function isRelated() : bool
     {
         $isRelated = false;
         $idSuffix = '_id';
@@ -194,27 +142,14 @@ class Revision extends Eloquent
         return $isRelated;
     }
 
-    /**
-     * Return the name of the related model.
-     *
-     * @return string
-     */
-    private function getRelatedModel()
+    private function getRelatedModel() : string
     {
         $idSuffix = '_id';
 
         return substr($this->key, 0, strlen($this->key) - strlen($idSuffix));
     }
 
-    /**
-     * Format the value according to the $revisionFormattedFields array.
-     *
-     * @param  $key
-     * @param  $value
-     *
-     * @return string formatted value
-     */
-    public function format($key, $value)
+    public function format($key, $value) : string
     {
         $related_model = $this->getActualClassNameForMorph($this->revisionable_type);
         $related_model = new $related_model();
@@ -227,31 +162,18 @@ class Revision extends Eloquent
         }
     }
 
-    /**
-     * New Value.
-     *
-     * Grab the new value of the field, if it was a foreign key
-     * attempt to get an identifying name for the model.
-     *
-     * @return string old value
-     */
-    public function newValue()
+    public function newValue() : string
     {
         return $this->getValue('new');
     }
 
-    /**
-     * User Responsible.
-     *
-     * @return User user responsible for the change
-     */
     public function userResponsible()
     {
         if (empty($this->user_id)) {
             return false;
         }
-        $user_model = config('auth.model');
 
+        $user_model = config('auth.model');
         if (empty($user_model)) {
             $user_model = config('auth.providers.users.model');
             if (empty($user_model)) {

@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'model' => LocalDynamics\Revisionable\Revision::class,
+    'model' => \LocalDynamics\Revisionable\Models\Revision::class,
 ];

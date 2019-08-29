@@ -3,7 +3,7 @@
 namespace LocalDynamics\Revisionable\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use LocalDynamics\Revisionable\IsRevisionable;
+use LocalDynamics\Revisionable\Concerns\IsRevisionable;
 
 /**
  * Add a revisionable model for testing purposes

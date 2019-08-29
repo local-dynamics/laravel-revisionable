@@ -1,6 +1,6 @@
 <?php
 
-namespace LocalDynamics\Revisionable;
+namespace LocalDynamics\Revisionable\Concerns;
 
 use Auth;
 use DB;
@@ -229,9 +229,6 @@ trait IsRevisionable
         }
     }
 
-    /**
-     * @return mixed
-     */
     public function revisionHistory()
     {
         return $this->morphMany(app('revisionableModel'), 'revisionable');
@@ -314,7 +311,6 @@ trait IsRevisionable
 
     /**
      * Attempt to find the user id of the currently logged in user
-     * Supports Cartalyst Sentry/Sentinel based authentication, as well as stock Auth
      **/
     public function getSystemUserId()
     {
