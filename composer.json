@@ -1,0 +1,56 @@
+{
+    "name": "local-dynamics/revisionable",
+    "license": "MIT",
+    "description": "Keep a revision history for your models without thinking, created as a package for use with Laravel",
+    "keywords": [
+        "model",
+        "laravel",
+        "ardent",
+        "revision",
+        "audit",
+        "history"
+    ],
+    "homepage": "http://github.com/local-dynamics/revisionable",
+    "authors": [
+        {
+            "name": "Chris Duell",
+            "email": "me@chrisduell.com"
+        },
+        {
+            "name": "Thomas Enßner",
+            "email": "thomas@ld-n.de"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "illuminate/support": "~5.0|^6.0",
+        "laravel/framework": "~5.4",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "classmap": [
+            "src/migrations"
+        ],
+        "psr-4": {
+            "LocalDynamics\\Revisionable\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/migrations"
+        ],
+        "psr-4": {
+            "LocalDynamics\\Revisionable\\Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "~3.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LocalDynamics\\Revisionable\\RevisionableServiceProvider"
+            ]
+        }
+    }
+}
