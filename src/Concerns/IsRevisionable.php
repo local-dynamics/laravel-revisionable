@@ -89,9 +89,7 @@ trait IsRevisionable
      */
     public function preSave()
     {
-        if (! isset($this->revisionEnabled) || $this->revisionEnabled) {
-            // if there's no revisionEnabled. Or if there is, if it's true
-
+        if ($this->revisionIsEnabled()) {
             $this->updating = $this->exists;
             $this->originalData = $this->original;
             $this->updatedData = $this->attributes;
@@ -129,6 +127,19 @@ trait IsRevisionable
 
             $this->dirtyData = $this->getDirty();
         }
+    }
+
+    private function revisionIsEnabled()
+    {
+        if (! config('revisionable.enabled', true)) {
+            return false;
+        }
+
+        if (! isset($this->revisionEnabled)) {
+            return true;
+        }
+
+        return $this->revisionEnabled;
     }
 
     /**
@@ -175,7 +186,7 @@ trait IsRevisionable
         }
 
         // check if the model already exists
-        if (((! isset($this->revisionEnabled) || $this->revisionEnabled) && $this->updating) && (! $LimitReached || $RevisionCleanup)) {
+        if (($this->revisionIsEnabled() && $this->updating) && (! $LimitReached || $RevisionCleanup)) {
             // if it does, it means we're updating
 
             $changes_to_record = $this->changedRevisionableFields();
@@ -352,7 +363,7 @@ trait IsRevisionable
      */
     public function postDelete()
     {
-        if ((! isset($this->revisionEnabled) || $this->revisionEnabled)
+        if ($this->revisionIsEnabled()
             && $this->isSoftDelete()
             && $this->isRevisionable($this->getDeletedAtColumn())
         ) {

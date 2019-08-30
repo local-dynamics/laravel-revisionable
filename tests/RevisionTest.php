@@ -87,6 +87,31 @@ class RevisionTest extends TestCase
     }
 
     /** @test */
+    public function revisions_dont_get_stored_if_config_disabled()
+    {
+        $user = User::create([
+            'name'     => 'James Judd',
+            'email'    => 'james.judd@revisionable.test',
+            'password' => Hash::make('456'),
+        ]);
+
+        config(['revisionable.enabled' => false]);
+
+        // change to my nickname
+        $user->update([
+            'name' => 'Judd',
+        ]);
+
+        // change to my forename
+        $user->update([
+            'name' => 'James',
+        ]);
+
+        // we should have two revisions to my name
+        $this->assertCount(0, $user->revisionHistory);
+    }
+
+    /** @test */
     public function revisions_of_array_fields_get_stored()
     {
         $user = User::create([
