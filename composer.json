@@ -12,13 +12,13 @@
     ],
     "homepage": "http://github.com/local-dynamics/revisionable",
     "authors": [
+                {
+            "name": "Thomas Enßner",
+            "email": "thomas@ld-n.de"
+        },
         {
             "name": "Chris Duell",
             "email": "me@chrisduell.com"
-        },
-        {
-            "name": "Thomas Enßner",
-            "email": "thomas@ld-n.de"
         }
     ],
     "require": {
