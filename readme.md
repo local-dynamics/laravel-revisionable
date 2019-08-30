@@ -1,7 +1,7 @@
 # Revisons for Laravel Eloquent 
 
 [![Laravel 5.8](https://img.shields.io/badge/Laravel-5.x-brightgreen.svg?style=flat-square)](https://laravel.com/)
-[![Latest Version](https://img.shields.io/github/release/LocalDynamics/revisionable.svg?style=flat-square)](https://packagist.org/packages/local-dynamics/laravel-revisionable)
+[![Latest Version](https://img.shields.io/github/release/local-dynamics/laravel-revisionable.svg?style=flat-square)](https://packagist.org/packages/local-dynamics/laravel-revisionable)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://tldrlegal.com/license/mit-license)
 
 Wouldn't it be nice to have a revision history for any model in your project, without having to do any work for it. By simply adding the `IsRevisionable` Trait to your model, you can instantly have just that, and be able to display a history similar to this:
