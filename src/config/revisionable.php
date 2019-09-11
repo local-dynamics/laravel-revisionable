@@ -1,6 +1,8 @@
 <?php
 
+use LocalDynamics\Revisionable\Models\Revision;
+
 return [
     'enabled' => true,
-    'model'   => \LocalDynamics\Revisionable\Models\Revision::class,
+    'model'   => Revision::class,
 ];

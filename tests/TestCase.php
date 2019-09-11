@@ -50,4 +50,13 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'password' => \Hash::make('secret'),
         ]));
     }
+
+    protected function createUserWithLimitedHistory(array $attributes = []) : UserWithLimitedHistory
+    {
+        return UserWithLimitedHistory::create(array_merge($attributes, [
+            'name'     => 'Peter Parker',
+            'email'    => 'peter.parker@revisionable.test',
+            'password' => \Hash::make('secret'),
+        ]));
+    }
 }

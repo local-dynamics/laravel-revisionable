@@ -5,8 +5,9 @@ namespace LocalDynamics\Revisionable\Concerns;
 use Auth;
 use DB;
 use Event;
-use Exception;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Arr;
+use LocalDynamics\Revisionable\FieldModifier;
 
 trait IsRevisionable
 {
@@ -25,6 +26,10 @@ trait IsRevisionable
      */
     private $updatedData = [];
     /**
+     * @var array
+     */
+    private $lastRevisionAttributes = [];
+    /**
      * @var boolean
      */
     private $updating = false;
@@ -37,20 +42,14 @@ trait IsRevisionable
      */
     private $doKeep = [];
 
-    /**
-     * Create the event listeners for the saving and saved events
-     * This lets us save revisions whenever a save is made, no matter the
-     * http method.
-     *
-     */
     public static function bootIsRevisionable()
     {
         static::saving(function ($model) {
             $model->preSave();
         });
 
-        static::saved(function ($model) {
-            $model->postSave();
+        static::updated(function ($model) {
+            $model->postUpdate();
         });
 
         static::created(function ($model) {
@@ -63,73 +62,45 @@ trait IsRevisionable
         });
     }
 
-    /**
-     * Generates a list of the last $limit revisions made to any objects of the class it is being called from.
-     *
-     * @param int $limit
-     * @param string $order
-     *
-     * @return mixed
-     */
-    public static function classRevisionHistory($limit = 100, $order = 'desc')
-    {
-        $model = app('revisionableModel');
-
-        return $model
-            ->where('revisionable_type', get_called_class())
-            ->orderBy('created_at', $order)
-            ->limit($limit)
-            ->get();
-    }
-
-    /**
-     * Invoked before a model is saved. Return false to abort the operation.
-     *
-     * @return bool
-     */
     public function preSave()
     {
-        if ($this->revisionIsEnabled()) {
-            $this->updating = $this->exists;
-            $this->originalData = $this->original;
-            $this->updatedData = $this->attributes;
-
-            // we can only safely compare basic items,
-            // so for now we drop any object based items, like DateTime
-            foreach ($this->updatedData as $key => $val) {
-                if (isset($this->casts[$key]) && in_array($this->casts[$key], ['object', 'array']) && isset($this->originalData[$key])) {
-                    // Sorts the keys of a JSON object due Normalization performed by MySQL
-                    // So it doesn't set false flag if it is changed only order of key or whitespace after comma
-
-                    $updatedData = $this->sortJsonKeys(json_decode($this->updatedData[$key], true));
-
-                    $this->updatedData[$key] = json_encode($updatedData);
-                    $this->originalData[$key] = json_encode(json_decode($this->originalData[$key], true));
-                } elseif (gettype($val) == 'object' && ! method_exists($val, '__toString')) {
-                    unset($this->originalData[$key]);
-                    unset($this->updatedData[$key]);
-                    array_push($this->dontKeep, $key);
-                }
-            }
-
-            // the below is ugly, for sure, but it's required so we can save the standard model
-            // then use the keep / dontkeep values for later, in the isRevisionable method
-            $this->dontKeep = isset($this->dontKeepRevisionOf)
-                ? array_merge($this->dontKeepRevisionOf, $this->dontKeep)
-                : $this->dontKeep;
-
-            $this->doKeep = isset($this->keepRevisionOf)
-                ? array_merge($this->keepRevisionOf, $this->doKeep)
-                : $this->doKeep;
-
-            unset($this->attributes['dontKeepRevisionOf']);
-            unset($this->attributes['keepRevisionOf']);
-
-            $this->dirtyData = $this->getDirty();
+        if (! $this->revisionableEnabled()) {
+            return;
         }
+
+        $this->originalData = $this->original;
+        $this->updatedData = $this->attributes;
+
+        // we can only safely compare basic items,
+        // so for now we drop any object based items, like DateTime
+        foreach ($this->updatedData as $key => $val) {
+            if (isset($this->casts[$key]) && in_array($this->casts[$key], ['object', 'array']) && isset($this->originalData[$key])) {
+                $this->updatedData[$key] = json_encode(FieldModifier::sortJsonKeys(json_decode($this->updatedData[$key], true)));
+                $this->originalData[$key] = json_encode(json_decode($this->originalData[$key], true));
+            } elseif (gettype($val) == 'object' && ! method_exists($val, '__toString')) {
+                unset($this->originalData[$key]);
+                unset($this->updatedData[$key]);
+                array_push($this->dontKeep, $key);
+            }
+        }
+
+        // the below is ugly, for sure, but it's required so we can save the standard model
+        // then use the keep / dontkeep values for later, in the isRevisionable method
+        $this->dontKeep = isset($this->dontKeepRevisionOf)
+            ? array_merge($this->dontKeepRevisionOf, $this->dontKeep)
+            : $this->dontKeep;
+
+        $this->doKeep = isset($this->keepRevisionOf)
+            ? array_merge($this->keepRevisionOf, $this->doKeep)
+            : $this->doKeep;
+
+        unset($this->attributes['dontKeepRevisionOf']);
+        unset($this->attributes['keepRevisionOf']);
+
+        $this->dirtyData = $this->getDirty();
     }
 
-    private function revisionIsEnabled()
+    private function revisionableEnabled() : bool
     {
         if (! config('revisionable.enabled', true)) {
             return false;
@@ -142,105 +113,39 @@ trait IsRevisionable
         return $this->revisionEnabled;
     }
 
-    /**
-     * Sorts the keys of a JSON object
-     *
-     * Normalization performed by MySQL and
-     * discards extra whitespace between keys, values, or elements
-     * in the original JSON document.
-     * To make lookups more efficient, it sorts the keys of a JSON object.
-     *
-     * @param mixed $attribute
-     *
-     * @return mixed
-     */
-    private function sortJsonKeys($attribute)
+    public function postUpdate() : void
     {
-        if (empty($attribute)) {
-            return $attribute;
-        }
-        foreach ($attribute as $key => $value) {
-            if (is_array($value) || is_object($value)) {
-                $value = $this->sortJsonKeys($value);
-            } else {
-                continue;
-            }
-            ksort($value);
-            $attribute[$key] = $value;
+        if (! $this->revisionableEnabled()) {
+            return;
         }
 
-        return $attribute;
-    }
+        $maxRevisionCountReached = (property_exists($this, 'historyLimit')
+            && $this->revisionHistory()->count() >= $this->historyLimit);
 
-    public function postSave() : void
-    {
-        if (isset($this->historyLimit) && $this->revisionHistory()->count() >= $this->historyLimit) {
-            $LimitReached = true;
-        } else {
-            $LimitReached = false;
-        }
-        if (isset($this->revisionCleanup)) {
-            $RevisionCleanup = $this->revisionCleanup;
-        } else {
-            $RevisionCleanup = false;
+        if ($maxRevisionCountReached && ! ($this->revisionCleanup ?? false)) {
+            return;
         }
 
-        // check if the model already exists
-        if (($this->revisionIsEnabled() && $this->updating) && (! $LimitReached || $RevisionCleanup)) {
-            // if it does, it means we're updating
+        $revisions = $this->changedRevisionableFields();
 
-            $changes_to_record = $this->changedRevisionableFields();
-
-            $revisions = [];
-
-            $getJsonData = function ($value) {
-                $jsonData = json_decode($value);
-                if (is_array($jsonData) || is_object($jsonData)) {
-                    return (array) $jsonData;
-                }
-                if (is_array($value) || is_object($value)) {
-                    return (array) $value;
-                } else {
-                    return $value;
-                }
+        if (count($revisions) && $maxRevisionCountReached && ($this->revisionCleanup ?? false)) {
+            foreach ($this->revisionHistory()
+                         ->orderBy('id')
+                         ->offset($this->historyLimit - 1)
+                         ->limit(1000)
+                         ->cursor() as $revision) {
+                $revision->delete();
             };
-
-            foreach ($changes_to_record as $key => $change) {
-                $originalData = $getJsonData(Arr::get($this->originalData, $key));
-                $updatedData = $getJsonData($this->updatedData[$key]);
-
-                // check if it's an array
-                if (is_array($originalData) && is_array($updatedData)) {
-                    // remove nulls and duplicates
-                    $updatedData = json_encode($updatedData);
-                    $originalData = json_encode($originalData);
-                }
-
-                $revisions[] = [
-                    'key'       => $key,
-                    'old_value' => $originalData,
-                    'new_value' => $updatedData,
-                ];
-            }
-
-            if (count($revisions) > 0) {
-                if ($LimitReached && $RevisionCleanup) {
-                    $toDelete = $this->revisionHistory()
-                        ->orderBy('id', 'asc')
-                        ->limit(count($revisions))
-                        ->get();
-
-                    foreach ($toDelete as $delete) {
-                        $delete->delete();
-                    }
-                }
-
-                $this->insertRevisions($revisions, 'saved');
-            }
         }
+
+        $this->insertRevisions($revisions, 'saved');
+
+        $this->originalData = null;
+        $this->updatedData = null;
+        $this->dirtyData = null;
     }
 
-    public function revisionHistory()
+    public function revisionHistory() : MorphMany
     {
         return $this->morphMany(app('revisionableModel'), 'revisionable');
     }
@@ -253,23 +158,28 @@ trait IsRevisionable
      */
     private function changedRevisionableFields()
     {
-        $changes_to_record = [];
-        foreach ($this->dirtyData as $key => $value) {
-            // check that the field is revisionable, and double check
-            // that it's actually new data in case dirty is, well, clean
-            if ($this->isRevisionable($key) && ! is_array($value)) {
-                if (! array_key_exists($key, $this->originalData) || $this->originalData[$key] != $this->updatedData[$key]) {
-                    $changes_to_record[$key] = $value;
+        $relevantChanges = [];
+        foreach ($this->dirtyData as $key => $newValue) {
+            if ($this->isRevisionable($key) && ! is_array($newValue)) {
+                $oldValue = array_key_exists($key, $this->lastRevisionAttributes)
+                    ? FieldModifier::convertValue(Arr::get($this->lastRevisionAttributes, $key))
+                    : FieldModifier::convertValue(Arr::get($this->originalData, $key));
+
+                if (! array_key_exists($key, $this->originalData) || $oldValue != $newValue) {
+                    $relevantChanges[] = [
+                        'key'       => $key,
+                        'old_value' => $oldValue,
+                        'new_value' => $newValue,
+                    ];
+                    $this->lastRevisionAttributes[$key] = $newValue;
                 }
             } else {
-                // we don't need these any more, and they could
-                // contain a lot of data, so lets trash them.
                 unset($this->updatedData[$key]);
                 unset($this->originalData[$key]);
             }
         }
 
-        return $changes_to_record;
+        return $relevantChanges;
     }
 
     /**
@@ -295,8 +205,12 @@ trait IsRevisionable
         return empty($this->doKeep);
     }
 
-    protected function insertRevisions(array $revisions, string $event)
+    private function insertRevisions(array $revisions, string $event)
     {
+        if (! count($revisions)) {
+            return;
+        }
+
         $default = [
             'revisionable_type' => $this->getMorphClass(),
             'revisionable_id'   => $this->getKey(),
@@ -305,7 +219,7 @@ trait IsRevisionable
             'key'               => null,
             'old_value'         => null,
             'new_value'         => null,
-            'user_id'           => $this->getSystemUserId(),
+            'user_id'           => auth()->id(),
             'created_at'        => now(),
         ];
 
@@ -320,31 +234,14 @@ trait IsRevisionable
         Event::dispatch('revisionable.' . $event, ['model' => $this, 'revisions' => $revisions]);
     }
 
-    /**
-     * Attempt to find the user id of the currently logged in user
-     **/
-    public function getSystemUserId()
-    {
-        try {
-            if (Auth::check()) {
-                return Auth::user()->getAuthIdentifier();
-            }
-        } catch (Exception $e) {
-        }
-
-        return null;
-    }
-
-    /**
-     * Called after record successfully created
-     */
     public function postCreate()
     {
-        // Check if we should store creations in our revision history
-        // Set this value to true in your model if you want to
-        if (empty($this->revisionCreationsEnabled)) {
-            // We should not store creations.
-            return false;
+        if (! $this->revisionableEnabled()) {
+            return;
+        }
+
+        if (! ($this->revisionCreationsEnabled ?? false)) {
+            return;
         }
 
         if ((! isset($this->revisionEnabled) || $this->revisionEnabled)) {
@@ -358,13 +255,14 @@ trait IsRevisionable
         }
     }
 
-    /**
-     * If softdeletes are enabled, store the deleted time
-     */
     public function postDelete()
     {
-        if ($this->revisionIsEnabled()
-            && $this->isSoftDelete()
+        if (! $this->revisionableEnabled()) {
+            return;
+        }
+
+        if (
+            $this->isSoftDelete()
             && $this->isRevisionable($this->getDeletedAtColumn())
         ) {
             $revisions[] = [

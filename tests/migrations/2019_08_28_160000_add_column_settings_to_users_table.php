@@ -15,6 +15,7 @@ class AddColumnSettingsToUsersTable extends Migration
     {
           Schema::table('users', function (Blueprint $table) {
             $table->text('settings')->nullable();
+            $table->timestamp('logged_in_at')->nullable();
         });
     }
 

@@ -5,6 +5,7 @@ namespace LocalDynamics\Revisionable\Tests;
 use Hash;
 use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\User;
+use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
 
 class RevisionTest extends TestCase
 {
@@ -93,9 +94,40 @@ class RevisionTest extends TestCase
         $this->assertCount(2, $user->revisionHistory);
     }
 
-    {
+    /** @test */
+    public function revision_of_carbon_dates() {
+        $user = $this->createUser();
+        $user->logged_in_at = now()->subDay();
+        $user->save();
+
+        $this->assertCount(1, $user->revisionHistory);
     }
 
+    /** @test */
+    public function revision_history_is_limited()
     {
+        $user = $this->createUserWithLimitedHistory();
+        $this->assertEquals(0, Revision::count());
+
+        for ($i = 0; $i <= ($user->getHistoryLimit() + 10); $i++) {
+            $user->update(['name' => 'Paul' . rand()]);
+        }
+        $this->assertEquals($user->getHistoryLimit(), Revision::count());
     }
+
+    /** @test */
+    public function revision_are_stored_once_even_with_event_listeners()
+    {
+        $user = $this->createUser();
+        $this->assertEquals(0, Revision::count());
+
+        User::observe(UserObserverNotPaulUpdater::class);
+
+        $user->update(['name' => 'Paul', 'password' => Hash::make('secret2'),]);
+
+        #   dump($user->revisionHistory->map(function ($rev) { return ['key' => $rev->key, 'new' => $rev->new_value, 'old' => $rev->old_value]; }));
+
+        $this->assertEquals(3, Revision::count());
+    }
+
 }

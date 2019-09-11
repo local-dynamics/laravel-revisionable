@@ -1,6 +1,6 @@
 <?php
 
-namespace LocalDynamics\Revisionable\Tests\Models;
+namespace LocalDynamics\Revisionable\Tests\Models\LimitedHistory;
 
 use Illuminate\Database\Eloquent\Model;
 use LocalDynamics\Revisionable\Concerns\IsRevisionable;
@@ -17,9 +17,13 @@ class User extends Model
         'settings' => 'array',
     ];
 
-    protected $dates = [
-        'logged_in_at',
-    ];
-
     protected $guarded = [];
+
+    protected $historyLimit = 200;
+    protected $revisionCleanup = true;
+
+
+    public function getHistoryLimit() {
+        return $this->historyLimit;
+    }
 }
