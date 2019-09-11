@@ -7,23 +7,10 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Support\Str;
 use LocalDynamics\Revisionable\FieldFormatter;
 
-/**
- * Revision.
- *
- * Base model to allow for revision history on
- * any model that extends this model
- *
- * (c) Venture Craft <http://www.venturecraft.com.au>
- */
 class Revision extends Eloquent
 {
     public $table = 'revisions';
     protected $revisionFormattedFields = [];
-
-    public function __construct(array $attributes = [])
-    {
-        parent::__construct($attributes);
-    }
 
     public function revisionable()
     {

@@ -6,6 +6,8 @@ use DateTime;
 
 class FieldFormatter
 {
+
+
     public static function format(string $key, $value, array $formats) : string
     {
         foreach ($formats as $pkey => $format) {

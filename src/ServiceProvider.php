@@ -19,7 +19,9 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     public function register()
     {
-        defined('PHP_PROCESS_UID') || define('PHP_PROCESS_UID', substr(hash('md5', uniqid('', true)), 0, 8));
+        defined('PHP_PROCESS_UID')
+        || define('PHP_PROCESS_UID', substr(hash('md5', uniqid('', true)), 0, 8));
+
         $this->app->bind('revisionableModel', config('revisionable.model', Revision::class));
     }
 }

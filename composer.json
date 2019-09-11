@@ -5,7 +5,6 @@
     "keywords": [
         "model",
         "laravel",
-        "ardent",
         "revision",
         "audit",
         "history"
