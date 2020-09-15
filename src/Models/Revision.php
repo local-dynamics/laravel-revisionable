@@ -11,6 +11,7 @@ class Revision extends Eloquent
 {
     public $table = 'revisions';
     protected $revisionFormattedFields = [];
+    public const UPDATED_AT = false;
 
     public function revisionable()
     {
