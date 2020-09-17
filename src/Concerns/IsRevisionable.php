@@ -2,7 +2,6 @@
 
 namespace LocalDynamics\Revisionable\Concerns;
 
-use Auth;
 use DB;
 use Event;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -41,6 +40,13 @@ trait IsRevisionable
      * @var array
      */
     private $doKeep = [];
+
+    protected $revisionEnabled = true;
+
+    public function disableRevisionable()
+    {
+        $this->revisionEnabled = false;
+    }
 
     public static function bootIsRevisionable()
     {
@@ -185,7 +191,7 @@ trait IsRevisionable
     /**
      * Check if this field should have a revision kept
      *
-     * @param string $key
+     * @param  string  $key
      *
      * @return bool
      */
@@ -231,7 +237,7 @@ trait IsRevisionable
 
         DB::table((new $revisionModel())->getTable())->insert($revisions);
 
-        Event::dispatch('revisionable.' . $event, ['model' => $this, 'revisions' => $revisions]);
+        Event::dispatch('revisionable.'.$event, ['model' => $this, 'revisions' => $revisions]);
     }
 
     public function postCreate()
@@ -357,7 +363,7 @@ trait IsRevisionable
      * Need to do the adding to array longhanded, as there's a
      * PHP bug https://bugs.php.net/bug.php?id=42030
      *
-     * @param mixed $field
+     * @param  mixed  $field
      *
      * @return void
      */
