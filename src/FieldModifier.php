@@ -26,7 +26,7 @@ class FieldModifier
     public static function convertValue($value)
     {
         if ($value instanceof \UnitEnum) {
-            $jsonData = $value->name;
+            $value = $value->value;
         }
 
         $jsonData = json_decode($value);
