@@ -1,8 +1,6 @@
 <?php
 
-
 namespace LocalDynamics\Revisionable;
-
 
 class FieldModifier
 {
@@ -27,6 +25,10 @@ class FieldModifier
 
     public static function convertValue($value)
     {
+        if ($value instanceof \UnitEnum) {
+            $jsonData = $value->name;
+        }
+
         $jsonData = json_decode($value);
         if (is_array($jsonData) || is_object($jsonData)) {
             return json_encode((array) $jsonData);

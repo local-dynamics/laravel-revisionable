@@ -9,11 +9,11 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     public function boot()
     {
         $this->publishes([
-            __DIR__ . '/../../config/revisionable.php' => config_path('revisionable.php'),
+            __DIR__.'/../../config/revisionable.php' => config_path('revisionable.php'),
         ], 'config');
 
         $this->publishes([
-            __DIR__ . '/../../migrations/' => database_path('migrations'),
+            __DIR__.'/../../migrations/' => database_path('migrations'),
         ], 'migrations');
     }
 

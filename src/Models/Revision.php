@@ -13,10 +13,7 @@ class Revision extends Eloquent
     protected $revisionFormattedFields = [];
     public const UPDATED_AT = null;
 
-    public function revisionable()
-    {
-        return $this->morphTo();
-    }
+    public function revisionable() { return $this->morphTo(); }
 
     public function fieldName() : string
     {
@@ -44,14 +41,11 @@ class Revision extends Eloquent
         return false;
     }
 
-    public function oldValue() : string
-    {
-        return $this->getValue('old');
-    }
+    public function oldValue() : string { return $this->getValue('old'); }
 
     private function getValue(string $which = 'new') : string
     {
-        $which_value = $which . '_value';
+        $which_value = $which.'_value';
 
         // First find the main model that was updated
         $main_model = $this->revisionable_type;
@@ -67,7 +61,7 @@ class Revision extends Eloquent
                     if (! method_exists($main_model, $related_model)) {
                         $related_model = Str::camel($related_model); // for cases like published_status_id
                         if (! method_exists($main_model, $related_model)) {
-                            throw new Exception('Relation ' . $related_model . ' does not exist for ' . get_class($main_model));
+                            throw new Exception('Relation '.$related_model.' does not exist for '.get_class($main_model));
                         }
                     }
                     $related_class = $main_model->$related_model()->getRelated();
@@ -90,7 +84,7 @@ class Revision extends Eloquent
                     // Check if model use IsRevisionable
                     if (method_exists($item, 'identifiableName')) {
                         // see if there's an available mutator
-                        $mutator = 'get' . studly_case($this->key) . 'Attribute';
+                        $mutator = 'get'.studly_case($this->key).'Attribute';
                         if (method_exists($item, $mutator)) {
                             return $this->format($item->$mutator($this->key), $item->identifiableName());
                         }
@@ -106,7 +100,7 @@ class Revision extends Eloquent
             // if there was an issue
             // or, if it's a normal value
 
-            $mutator = 'get' . studly_case($this->key) . 'Attribute';
+            $mutator = 'get'.studly_case($this->key).'Attribute';
             if (method_exists($main_model, $mutator)) {
                 return $this->format($this->key, $main_model->$mutator($this->$which_value));
             }
@@ -150,10 +144,7 @@ class Revision extends Eloquent
         }
     }
 
-    public function newValue() : string
-    {
-        return $this->getValue('new');
-    }
+    public function newValue() : string { return $this->getValue('new'); }
 
     public function userResponsible()
     {
