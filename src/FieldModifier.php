@@ -25,11 +25,16 @@ class FieldModifier
 
     public static function convertValue($value)
     {
+        if (is_null($value)) {
+            return null;
+        }
+
         if ($value instanceof \UnitEnum) {
             $value = $value->value;
         }
 
         $jsonData = json_decode($value);
+
         if (is_array($jsonData) || is_object($jsonData)) {
             return json_encode((array) $jsonData);
         }
