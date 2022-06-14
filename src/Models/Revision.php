@@ -7,6 +7,26 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Support\Str;
 use LocalDynamics\Revisionable\FieldFormatter;
 
+/**
+ * LocalDynamics\Revisionable\Models\Revision
+ *
+ * @property int $id
+ * @property int $revisionable_type
+ * @property int $revisionable_id
+ * @property int $revision
+ * @property string|null $process
+ * @property string $key
+ * @property string|null $old_value
+ * @property string|null $new_value
+ * @property int|null $user_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property-read Eloquent|\Eloquent $revisionable
+ * @property-read \App\Models\User|null $user
+ * @method static \Illuminate\Database\Eloquent\Builder|Revision newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Revision newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Revision query()
+ * @mixin \Eloquent
+ */
 class Revision extends Eloquent
 {
     public $table = 'revisions';
@@ -146,25 +166,11 @@ class Revision extends Eloquent
 
     public function newValue() : string { return $this->getValue('new'); }
 
-    public function userResponsible()
+    public function user()
     {
-        if (empty($this->user_id)) {
-            return false;
-        }
-
-        $user_model = config('auth.model');
-        if (empty($user_model)) {
-            $user_model = config('auth.providers.users.model');
-            if (empty($user_model)) {
-                return false;
-            }
-        }
-        if (! class_exists($user_model)) {
-            return false;
-        }
-
-        return $user_model::find($this->user_id);
+        return $this->belongsTo(config('auth.model') ?? config('auth.providers.users.model'));
     }
+
 
     /*
      * Examples:
