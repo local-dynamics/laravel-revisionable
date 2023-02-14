@@ -22,20 +22,25 @@ use LocalDynamics\Revisionable\FieldFormatter;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property-read Eloquent|\Eloquent $revisionable
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder|Revision newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Revision newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Revision query()
+ *
  * @mixin \Eloquent
  */
 class Revision extends Eloquent
 {
-    public $table = 'revisions';
-    protected $revisionFormattedFields = [];
     public const UPDATED_AT = null;
 
-    public function revisionable() { return $this->morphTo(); }
+    protected $revisionFormattedFields = [];
 
-    public function fieldName() : string
+    public function revisionable()
+    {
+        return $this->morphTo();
+    }
+
+    public function fieldName(): string
     {
         if ($formatted = $this->formatFieldName($this->key)) {
             return $formatted;
@@ -48,7 +53,7 @@ class Revision extends Eloquent
         return $this->key;
     }
 
-    private function formatFieldName($key) : bool
+    private function formatFieldName($key): bool
     {
         $related_model = $this->getActualClassNameForMorph($this->revisionable_type);
         $related_model = new $related_model();
@@ -61,9 +66,12 @@ class Revision extends Eloquent
         return false;
     }
 
-    public function oldValue() : string { return $this->getValue('old'); }
+    public function oldValue(): string
+    {
+        return $this->getValue('old');
+    }
 
-    private function getValue(string $which = 'new') : string
+    private function getValue(string $which = 'new'): string
     {
         $which_value = $which.'_value';
 
@@ -104,7 +112,7 @@ class Revision extends Eloquent
                     // Check if model use IsRevisionable
                     if (method_exists($item, 'identifiableName')) {
                         // see if there's an available mutator
-                        $mutator = 'get'.studly_case($this->key).'Attribute';
+                        $mutator = 'get'.Str::studly($this->key).'Attribute';
                         if (method_exists($item, $mutator)) {
                             return $this->format($item->$mutator($this->key), $item->identifiableName());
                         }
@@ -120,7 +128,7 @@ class Revision extends Eloquent
             // if there was an issue
             // or, if it's a normal value
 
-            $mutator = 'get'.studly_case($this->key).'Attribute';
+            $mutator = 'get'.Str::studly($this->key).'Attribute';
             if (method_exists($main_model, $mutator)) {
                 return $this->format($this->key, $main_model->$mutator($this->$which_value));
             }
@@ -129,7 +137,7 @@ class Revision extends Eloquent
         return $this->format($this->key, $this->$which_value);
     }
 
-    private function isRelated() : bool
+    private function isRelated(): bool
     {
         $isRelated = false;
         $idSuffix = '_id';
@@ -144,14 +152,14 @@ class Revision extends Eloquent
         return $isRelated;
     }
 
-    private function getRelatedModel() : string
+    private function getRelatedModel(): string
     {
         $idSuffix = '_id';
 
         return substr($this->key, 0, strlen($this->key) - strlen($idSuffix));
     }
 
-    public function format($key, $value) : string
+    public function format($key, $value): string
     {
         $related_model = $this->getActualClassNameForMorph($this->revisionable_type);
         $related_model = new $related_model();
@@ -164,13 +172,15 @@ class Revision extends Eloquent
         }
     }
 
-    public function newValue() : string { return $this->getValue('new'); }
+    public function newValue(): string
+    {
+        return $this->getValue('new');
+    }
 
     public function user()
     {
         return $this->belongsTo(config('auth.model') ?? config('auth.providers.users.model'));
     }
-
 
     /*
      * Examples:
@@ -183,7 +193,7 @@ class Revision extends Eloquent
     /**
      * Returns the object we have the history of
      *
-     * @return Object|false
+     * @return object|false
      */
     public function historyOf()
     {

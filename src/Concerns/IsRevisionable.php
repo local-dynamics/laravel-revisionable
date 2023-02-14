@@ -16,26 +16,32 @@ trait IsRevisionable
      * @var array
      */
     protected $dirtyData = [];
+
     /**
      * @var array
      */
     private $originalData = [];
+
     /**
      * @var array
      */
     private $updatedData = [];
+
     /**
      * @var array
      */
     private $lastRevisionAttributes = [];
+
     /**
-     * @var boolean
+     * @var bool
      */
     private $updating = false;
+
     /**
      * @var array
      */
     private $dontKeep = [];
+
     /**
      * @var array
      */
@@ -51,20 +57,21 @@ trait IsRevisionable
     public static function bootIsRevisionable()
     {
         static::saving(function ($model) {
-            $model->preSave();
+        $model->preSave();
         });
 
         static::updated(function ($model) {
-            $model->postUpdate();
+        $model->postUpdate();
         });
 
         static::created(function ($model) {
-            $model->postCreate();
+        $model->postCreate();
         });
 
         static::deleted(function ($model) {
             $model->preSave();
             $model->postDelete();
+            $model->postForceDelete();
         });
     }
 
@@ -80,7 +87,12 @@ trait IsRevisionable
         // we can only safely compare basic items,
         // so for now we drop any object based items, like DateTime
         foreach ($this->updatedData as $key => $val) {
-            if (isset($this->casts[$key]) && in_array($this->casts[$key], ['object', 'array']) && isset($this->originalData[$key])) {
+            $castCheck = ['object', 'array'];
+            if (isset($this->casts[$key])
+                && in_array(gettype($val), $castCheck)
+                && in_array($this->casts[$key], $castCheck)
+                && isset($this->originalData[$key])
+            ) {
                 $this->updatedData[$key] = json_encode(FieldModifier::sortJsonKeys(json_decode($this->updatedData[$key], true)));
                 $this->originalData[$key] = json_encode(json_decode($this->originalData[$key], true));
             } elseif (gettype($val) == 'object' && ! method_exists($val, '__toString')) {
@@ -104,22 +116,10 @@ trait IsRevisionable
         unset($this->attributes['keepRevisionOf']);
 
         $this->dirtyData = $this->getDirty();
+        $this->updating = $this->exists;
     }
 
-    private function revisionableEnabled() : bool
-    {
-        if (! config('revisionable.enabled', true)) {
-            return false;
-        }
-
-        if (! isset($this->revisionEnabled)) {
-            return true;
-        }
-
-        return $this->revisionEnabled;
-    }
-
-    public function postUpdate() : void
+    public function postUpdate(): void
     {
         if (! $this->revisionableEnabled()) {
             return;
@@ -141,7 +141,7 @@ trait IsRevisionable
                          ->limit(1000)
                          ->cursor() as $revision) {
                 $revision->delete();
-            };
+            }
         }
 
         $this->insertRevisions($revisions, 'saved');
@@ -151,7 +151,31 @@ trait IsRevisionable
         $this->dirtyData = null;
     }
 
-    public function revisionHistory() : MorphMany
+     public function postForceDelete()
+     {
+         if (empty($this->revisionForceDeleteEnabled)) {
+             return false;
+         }
+
+         if ((! isset($this->revisionEnabled) || $this->revisionEnabled)
+             && (($this->isSoftDelete() && $this->isForceDeleting()) || ! $this->isSoftDelete())) {
+             $revisions[] = [
+                 'revisionable_type' => $this->getMorphClass(),
+                 'revisionable_id' => $this->getKey(),
+                 'key' => self::CREATED_AT,
+                 'old_value' => $this->{self::CREATED_AT},
+                 'new_value' => null,
+                 'user_id' => $this->getSystemUserId(),
+                 'created_at' => new \DateTime(),
+             ];
+
+             $revision = app('revisionableModel');
+             \DB::table((new $revision)->getTable())->insert($revisions);
+             \Event::dispatch('revisionable.deleted', ['model' => $this, 'revisions' => $revisions]);
+         }
+     }
+
+    public function revisionHistory(): MorphMany
     {
         return $this->morphMany(app('revisionableModel'), 'revisionable');
     }
@@ -173,7 +197,7 @@ trait IsRevisionable
 
                 if (! array_key_exists($key, $this->originalData) || $oldValue != $newValue) {
                     $relevantChanges[] = [
-                        'key'       => $key,
+                        'key' => $key,
                         'old_value' => $oldValue,
                         'new_value' => $newValue,
                     ];
@@ -192,7 +216,6 @@ trait IsRevisionable
      * Check if this field should have a revision kept
      *
      * @param  string  $key
-     *
      * @return bool
      */
     private function isRevisionable($key)
@@ -219,14 +242,14 @@ trait IsRevisionable
 
         $default = [
             'revisionable_type' => $this->getMorphClass(),
-            'revisionable_id'   => $this->getKey(),
-            'revision'          => now()->microsecond,
-            'process'           => PHP_PROCESS_UID,
-            'key'               => null,
-            'old_value'         => null,
-            'new_value'         => null,
-            'user_id'           => auth()->id(),
-            'created_at'        => now(),
+            'revisionable_id' => $this->getKey(),
+            'revision' => now()->microsecond,
+            'process' => PHP_PROCESS_UID,
+            'key' => null,
+            'old_value' => null,
+            'new_value' => null,
+            'user_id' => auth()->id(),
+            'created_at' => now(),
         ];
 
         foreach ($revisions as &$revision) {
@@ -252,7 +275,7 @@ trait IsRevisionable
 
         if ((! isset($this->revisionEnabled) || $this->revisionEnabled)) {
             $revisions[] = [
-                'key'       => self::CREATED_AT,
+                'key' => self::CREATED_AT,
                 'old_value' => null,
                 'new_value' => $this->{self::CREATED_AT},
             ];
@@ -272,7 +295,7 @@ trait IsRevisionable
             && $this->isRevisionable($this->getDeletedAtColumn())
         ) {
             $revisions[] = [
-                'key'       => $this->getDeletedAtColumn(),
+                'key' => $this->getDeletedAtColumn(),
                 'old_value' => null,
                 'new_value' => $this->{$this->getDeletedAtColumn()},
             ];
@@ -364,7 +387,6 @@ trait IsRevisionable
      * PHP bug https://bugs.php.net/bug.php?id=42030
      *
      * @param  mixed  $field
-     *
      * @return void
      */
     public function disableRevisionField($field)
@@ -383,4 +405,17 @@ trait IsRevisionable
             unset($donts);
         }
     }
+
+  private function revisionableEnabled(): bool
+  {
+      if (! config('revisionable.enabled', true)) {
+          return false;
+      }
+
+      if (! isset($this->revisionEnabled)) {
+          return true;
+      }
+
+      return $this->revisionEnabled;
+  }
 }

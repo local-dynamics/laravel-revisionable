@@ -20,10 +20,11 @@ class User extends Model
     protected $guarded = [];
 
     protected $historyLimit = 200;
+
     protected $revisionCleanup = true;
 
-
-    public function getHistoryLimit() {
+    public function getHistoryLimit()
+    {
         return $this->historyLimit;
     }
 }

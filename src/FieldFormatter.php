@@ -6,12 +6,11 @@ use DateTime;
 
 class FieldFormatter
 {
-
-    public static function format(string $key, $value, array $formats) : string
+    public static function format(string $key, $value, array $formats): string
     {
         foreach ($formats as $pkey => $format) {
             $parts = explode(':', $format);
-            if (sizeof($parts) === 1) {
+            if (count($parts) === 1) {
                 continue;
             }
 
@@ -28,27 +27,27 @@ class FieldFormatter
         return $value;
     }
 
-    public static function isEmpty($value, array $options = []) : string
+    public static function isEmpty($value, array $options = []): string
     {
         $value_set = isset($value) && $value != '';
 
         return sprintf(self::boolean($value_set, $options), $value);
     }
 
-    public static function boolean($value, ?array $options = null) : string
+    public static function boolean($value, ?array $options = null): string
     {
         if (! is_null($options)) {
             $options = explode('|', $options);
         }
 
-        if (sizeof($options) != 2) {
+        if (count($options) != 2) {
             $options = ['No', 'Yes'];
         }
 
-        return $options[! ! $value];
+        return $options[(bool) $value];
     }
 
-    public static function string($value, $format = null) : string
+    public static function string($value, $format = null): string
     {
         if (is_null($format)) {
             $format = '%s';
@@ -57,7 +56,7 @@ class FieldFormatter
         return sprintf($format, $value);
     }
 
-    public static function datetime($value, string $format = 'Y-m-d H:i:s') : ?string
+    public static function datetime($value, string $format = 'Y-m-d H:i:s'): ?string
     {
         if (empty($value)) {
             return null;
@@ -66,5 +65,23 @@ class FieldFormatter
         $datetime = new DateTime($value);
 
         return $datetime->format($format);
+    }
+
+    public static function options($value, $format)
+    {
+        $options = explode('|', $format);
+
+        $result = [];
+
+        foreach ($options as $option) {
+            $transform = explode('.', $option);
+            $result[$transform[0]] = $transform[1];
+        }
+
+        if (isset($result[$value])) {
+            return $result[$value];
+        }
+
+        return 'undefined';
     }
 }

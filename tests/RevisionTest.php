@@ -66,8 +66,8 @@ class RevisionTest extends TestCase
     public function revisions_of_array_fields_get_stored()
     {
         $user = User::create([
-            'name'     => 'James Judd',
-            'email'    => 'james.judd@revisionable.test',
+            'name' => 'James Judd',
+            'email' => 'james.judd@revisionable.test',
             'password' => Hash::make('456'),
             'settings' => [
                 'settingA' => true,
@@ -95,7 +95,8 @@ class RevisionTest extends TestCase
     }
 
     /** @test */
-    public function revision_of_carbon_dates() {
+    public function revision_of_carbon_dates()
+    {
         $user = $this->createUser();
         $user->logged_in_at = now()->subDay();
         $user->save();
@@ -110,7 +111,7 @@ class RevisionTest extends TestCase
         $this->assertEquals(0, Revision::count());
 
         for ($i = 0; $i <= ($user->getHistoryLimit() + 10); $i++) {
-            $user->update(['name' => 'Paul' . rand()]);
+            $user->update(['name' => 'Paul'.rand()]);
         }
         $this->assertEquals($user->getHistoryLimit(), Revision::count());
     }
@@ -123,11 +124,10 @@ class RevisionTest extends TestCase
 
         User::observe(UserObserverNotPaulUpdater::class);
 
-        $user->update(['name' => 'Paul', 'password' => Hash::make('secret2'),]);
+        $user->update(['name' => 'Paul', 'password' => Hash::make('secret2')]);
 
-        #   dump($user->revisionHistory->map(function ($rev) { return ['key' => $rev->key, 'new' => $rev->new_value, 'old' => $rev->old_value]; }));
+        //   dump($user->revisionHistory->map(function ($rev) { return ['key' => $rev->key, 'new' => $rev->new_value, 'old' => $rev->old_value]; }));
 
         $this->assertEquals(3, Revision::count());
     }
-
 }

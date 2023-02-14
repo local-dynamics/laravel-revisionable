@@ -4,7 +4,6 @@ namespace LocalDynamics\Revisionable;
 
 class FieldModifier
 {
-
     public static function sortJsonKeys($attribute)
     {
         if (empty($attribute)) {
@@ -45,5 +44,4 @@ class FieldModifier
 
         return $value;
     }
-
 }

@@ -4,5 +4,6 @@ use LocalDynamics\Revisionable\Models\Revision;
 
 return [
     'enabled' => true,
-    'model'   => Revision::class,
+    'model' => Revision::class,
+    'additional_fields' => [],
 ];
