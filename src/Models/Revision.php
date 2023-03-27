@@ -33,7 +33,7 @@ class Revision extends Eloquent
 {
     public const UPDATED_AT = null;
 
-    protected $revisionFormattedFields = [];
+    protected array $revisionFormattedFields = [];
 
     public function revisionable()
     {
@@ -46,24 +46,16 @@ class Revision extends Eloquent
             return $formatted;
         }
 
-        if (strpos($this->key, '_id')) {
-            return str_replace('_id', '', $this->key);
-        }
-
-        return $this->key;
+        return str($this->key)->beforeLast('_id')->toString();
     }
 
-    private function formatFieldName($key): bool
+    private function formatFieldName($key): string|bool
     {
         $related_model = $this->getActualClassNameForMorph($this->revisionable_type);
         $related_model = new $related_model();
         $revisionFormattedFieldNames = $related_model->getRevisionFormattedFieldNames();
 
-        if (isset($revisionFormattedFieldNames[$key])) {
-            return $revisionFormattedFieldNames[$key];
-        }
-
-        return false;
+        return $revisionFormattedFieldNames[$key] ?? false;
     }
 
     public function oldValue(): string
@@ -85,11 +77,11 @@ class Revision extends Eloquent
                 if ($this->isRelated()) {
                     $related_model = $this->getRelatedModel();
 
-                    // Now we can find out the namespace of of related model
+                    // Now we can find out the namespace of related model
                     if (! method_exists($main_model, $related_model)) {
                         $related_model = Str::camel($related_model); // for cases like published_status_id
                         if (! method_exists($main_model, $related_model)) {
-                            throw new Exception('Relation '.$related_model.' does not exist for '.get_class($main_model));
+                            throw new Exception('Relation '.$related_model.' does not exist for '.$main_model::class);
                         }
                     }
                     $related_class = $main_model->$related_model()->getRelated();
@@ -139,24 +131,12 @@ class Revision extends Eloquent
 
     private function isRelated(): bool
     {
-        $isRelated = false;
-        $idSuffix = '_id';
-        $pos = strrpos($this->key, $idSuffix);
-
-        if ($pos !== false
-            && strlen($this->key) - strlen($idSuffix) === $pos
-        ) {
-            $isRelated = true;
-        }
-
-        return $isRelated;
+        return str($this->key)->endsWith('_id');
     }
 
     private function getRelatedModel(): string
     {
-        $idSuffix = '_id';
-
-        return substr($this->key, 0, strlen($this->key) - strlen($idSuffix));
+        return str($this->key)->beforeLast('_id');
     }
 
     public function format($key, $value): string
@@ -184,10 +164,10 @@ class Revision extends Eloquent
 
     /*
      * Examples:
-    array(
-        'public' => 'boolean:Yes|No',
-        'minimum'  => 'string:Min: %s'
-    )
+        array(
+            'public' => 'boolean:Yes|No',
+            'minimum'  => 'string:Min: %s'
+        )
      */
 
     /**

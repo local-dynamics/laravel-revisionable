@@ -2,6 +2,8 @@
 
 namespace LocalDynamics\Revisionable;
 
+use UnitEnum;
+
 class FieldModifier
 {
     public static function sortJsonKeys($attribute)
@@ -28,7 +30,7 @@ class FieldModifier
             return null;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             $value = $value->value;
         }
 

@@ -6,27 +6,6 @@ use DateTime;
 
 class FieldFormatter
 {
-    public static function format(string $key, $value, array $formats): string
-    {
-        foreach ($formats as $pkey => $format) {
-            $parts = explode(':', $format);
-            if (count($parts) === 1) {
-                continue;
-            }
-
-            if ($pkey == $key) {
-                $method = array_shift($parts);
-
-                if (method_exists(get_class(), $method)) {
-                    return self::$method($value, implode(':', $parts));
-                }
-                break;
-            }
-        }
-
-        return $value;
-    }
-
     public static function isEmpty($value, array $options = []): string
     {
         $value_set = isset($value) && $value != '';
@@ -67,15 +46,38 @@ class FieldFormatter
         return $datetime->format($format);
     }
 
+    public static function format(string $key, $value, array $formats): string
+    {
+        foreach ($formats as $pkey => $format) {
+            $parts = explode(':', $format);
+            if (count($parts) === 1) {
+                continue;
+            }
+
+            if ($pkey == $key) {
+                $method = array_shift($parts);
+
+                if (method_exists(static::class, $method)) {
+                    return self::$method($value, implode(':', $parts));
+                }
+                break;
+            }
+        }
+
+        return $value;
+    }
+
     public static function options($value, $format)
     {
-        $options = explode('|', $format);
+        $options = array_map(function ($val) {
+            return str_replace('\\|', '|', $val);
+        }, preg_split('~(?<!\\\)'.preg_quote('|', '~').'~', $format));
 
         $result = [];
 
         foreach ($options as $option) {
-            $transform = explode('.', $option);
-            $result[$transform[0]] = $transform[1];
+            $transform = preg_split('~(?<!\\\)'.preg_quote('.', '~').'~', $option);
+            $result[$transform[0]] = str_replace('\\.', '.', $transform[1]);
         }
 
         if (isset($result[$value])) {
