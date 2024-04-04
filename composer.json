@@ -9,7 +9,7 @@
     "audit",
     "history"
   ],
-  "homepage": "http://github.com/local-dynamics/revisionable",
+  "homepage": "http://github.com/local-dynamics/laravel-revisionable",
   "authors": [
     {
       "name": "Thomas Enßner",

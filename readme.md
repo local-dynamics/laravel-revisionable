@@ -21,7 +21,7 @@ Revisionable is installable via [composer](https://getcomposer.org/doc/00-intro.
 Add the following to the `require` section of your projects composer.json file:
 
 ```php
-"LocalDynamics/revisionable": "1.*",
+"local-dynamics/laravel-revisionable": "1.*",
 ```
 
 Run composer update to download the package
