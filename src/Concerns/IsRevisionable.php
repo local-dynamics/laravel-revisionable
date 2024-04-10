@@ -28,19 +28,19 @@ trait IsRevisionable
 
     public static function bootIsRevisionable()
     {
-        static::saving(function ($model) {
+        static::saving(function($model) {
             $model->preSave();
         });
 
-        static::updated(function ($model) {
+        static::updated(function($model) {
             $model->postUpdate();
         });
 
-        static::created(function ($model) {
+        static::created(function($model) {
             $model->postCreate();
         });
 
-        static::deleted(function ($model) {
+        static::deleted(function($model) {
             $model->preSave();
             $model->postDelete();
             $model->postForceDelete();
@@ -121,10 +121,10 @@ trait IsRevisionable
 
         if (count($revisions) && $maxRevisionCountReached && ($this->revisionCleanup ?? false)) {
             foreach ($this->revisionHistory()
-                ->orderBy('id')
-                ->offset($this->historyLimit - 1)
-                ->limit(1000)
-                ->cursor() as $revision) {
+                         ->orderBy('id')
+                         ->offset($this->historyLimit - 1)
+                         ->limit(1000)
+                         ->cursor() as $revision) {
                 $revision->delete();
             }
         }
@@ -158,7 +158,7 @@ trait IsRevisionable
 
                 if (! array_key_exists($key, $this->originalData) || $oldValue != $newValue) {
                     $relevantChanges[] = [
-                        'key' => $key,
+                        'key'       => $key,
                         'old_value' => $oldValue,
                         'new_value' => $newValue,
                     ];
@@ -200,21 +200,24 @@ trait IsRevisionable
 
         $default = [
             'revisionable_type' => $this->getMorphClass(),
-            'revisionable_id' => $this->getKey(),
-            'revision' => now()->microsecond,
-            'process' => PHP_PROCESS_UID,
-            'key' => null,
-            'old_value' => null,
-            'new_value' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
+            'revisionable_id'   => $this->getKey(),
+            'revision'          => now()->microsecond,
+            'process'           => PHP_PROCESS_UID,
+            'key'               => null,
+            'old_value'         => null,
+            'new_value'         => null,
+            'user_id'           => auth()->id(),
+            'created_at'        => now(),
         ];
 
         foreach ($revisions as &$revision) {
             $revision = array_merge($default, $revision);
         }
+        unset($revision);
 
-        Revision::create($revisions);
+        foreach ($revisions as $revision) {
+            Revision::create($revision);
+        }
 
         Event::dispatch('revisionable.'.$event, ['model' => $this, 'revisions' => $revisions]);
     }
@@ -231,7 +234,7 @@ trait IsRevisionable
 
         if ((! isset($this->revisionEnabled) || $this->revisionEnabled)) {
             $revisions[] = [
-                'key' => self::CREATED_AT,
+                'key'       => self::CREATED_AT,
                 'old_value' => null,
                 'new_value' => $this->{self::CREATED_AT},
             ];
@@ -251,7 +254,7 @@ trait IsRevisionable
             && $this->isRevisionable($this->getDeletedAtColumn())
         ) {
             $revisions[] = [
-                'key' => $this->getDeletedAtColumn(),
+                'key'       => $this->getDeletedAtColumn(),
                 'old_value' => null,
                 'new_value' => $this->{$this->getDeletedAtColumn()},
             ];
@@ -282,12 +285,12 @@ trait IsRevisionable
             && (($this->isSoftDelete() && $this->isForceDeleting()) || ! $this->isSoftDelete())) {
             $revisions[] = [
                 'revisionable_type' => $this->getMorphClass(),
-                'revisionable_id' => $this->getKey(),
-                'key' => self::CREATED_AT,
-                'old_value' => $this->{self::CREATED_AT},
-                'new_value' => null,
-                'user_id' => $this->getSystemUserId(),
-                'created_at' => new \DateTime(),
+                'revisionable_id'   => $this->getKey(),
+                'key'               => self::CREATED_AT,
+                'old_value'         => $this->{self::CREATED_AT},
+                'new_value'         => null,
+                'user_id'           => $this->getSystemUserId(),
+                'created_at'        => new \DateTime(),
             ];
 
             foreach ($revisions as $revision) {
