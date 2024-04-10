@@ -43,7 +43,8 @@
     }
   },
   "require-dev": {
-    "orchestra/testbench": "^v9.0.0"
+    "orchestra/testbench": "^v9.0.0",
+    "laravel/pint": "^1.15"
   },
   "extra": {
     "laravel": {

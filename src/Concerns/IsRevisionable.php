@@ -121,19 +121,19 @@ trait IsRevisionable
 
         if (count($revisions) && $maxRevisionCountReached && ($this->revisionCleanup ?? false)) {
             foreach ($this->revisionHistory()
-                         ->orderBy('id')
-                         ->offset($this->historyLimit - 1)
-                         ->limit(1000)
-                         ->cursor() as $revision) {
+                ->orderBy('id')
+                ->offset($this->historyLimit - 1)
+                ->limit(1000)
+                ->cursor() as $revision) {
                 $revision->delete();
             }
         }
 
         $this->insertRevisions($revisions, 'saved');
 
-        $this->originalData = null;
-        $this->updatedData = null;
-        $this->dirtyData = null;
+        $this->originalData = [];
+        $this->updatedData = [];
+        $this->dirtyData = [];
     }
 
     public function revisionHistory(): MorphMany
@@ -290,13 +290,15 @@ trait IsRevisionable
                 'created_at' => new \DateTime(),
             ];
 
-            Revision::create($revisions);
+            foreach ($revisions as $revision) {
+                Revision::create($revision);
+            }
 
             Event::dispatch('revisionable.deleted', ['model' => $this, 'revisions' => $revisions]);
         }
     }
 
-    public function disableRevisionable()
+    public function disableRevisionable(): void
     {
         $this->revisionEnabled = false;
     }
@@ -326,7 +328,7 @@ trait IsRevisionable
      *
      * @return string an identifying name for the model
      */
-    public function identifiableName()
+    public function identifiableName(): string
     {
         return $this->getKey();
     }
@@ -340,7 +342,7 @@ trait IsRevisionable
      *
      * @return string an identifying name for the model
      */
-    public function getRevisionNullString()
+    public function getRevisionNullString(): string
     {
         return isset($this->revisionNullString) ? $this->revisionNullString : 'nothing';
     }
@@ -353,7 +355,7 @@ trait IsRevisionable
      *
      * @return string an identifying name for the model
      */
-    public function getRevisionUnknownString()
+    public function getRevisionUnknownString(): string
     {
         return isset($this->revisionUnknownString) ? $this->revisionUnknownString : 'unknown';
     }
