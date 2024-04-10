@@ -33,6 +33,8 @@ class Revision extends Eloquent
 {
     public const UPDATED_AT = null;
 
+    protected $guarded = [];
+
     protected array $revisionFormattedFields = [];
 
     public function revisionable()
