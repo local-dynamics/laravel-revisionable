@@ -21,9 +21,9 @@
     }
   ],
   "require": {
-    "php": ">=8.2",
-    "illuminate/support": "^v10.0|^v11.0",
-    "laravel/framework": "^v10.0|^v11.0",
+    "php": ">=8.4",
+    "illuminate/support": "^v11.0|^v12.0",
+    "laravel/framework": "^v11.0|^12.1.1",
     "ext-json": "*"
   },
   "autoload": {
@@ -43,8 +43,8 @@
     }
   },
   "require-dev": {
-    "orchestra/testbench": "^v9.0.0",
-    "laravel/pint": "^1.15"
+    "orchestra/testbench": "^10.1.0",
+    "laravel/pint": "^v1.21.0"
   },
   "extra": {
     "laravel": {
