@@ -20,10 +20,7 @@ class CreateRevisionsTable extends Migration
             $table->char('revision', 8)->nullable();
             $table->timestamp('created_at');
 
-            $table->index([
-                'revisionable_id',
-                'revisionable_type',
-            ]);
+            $table->index(['revisionable_id', 'revisionable_type']);
         });
     }
 

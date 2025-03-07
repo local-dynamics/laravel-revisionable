@@ -6,7 +6,7 @@ use LocalDynamics\Revisionable\Tests\Models\User;
 
 class UserObserverNotPaulUpdater
 {
-    public function updated(User $user)
+    public function updated(User $user): void
     {
         if ($user->name == 'Paul') {
             $user->name = 'not Peter';
