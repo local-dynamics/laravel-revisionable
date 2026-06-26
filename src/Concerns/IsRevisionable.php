@@ -275,29 +275,24 @@ trait IsRevisionable
         return false;
     }
 
-    public function postForceDelete()
+    public function postForceDelete(): void
     {
         if (empty($this->revisionForceDeleteEnabled)) {
-            return false;
+            return;
         }
 
-        if ((! isset($this->revisionEnabled) || $this->revisionEnabled)
-            && (($this->isSoftDelete() && $this->isForceDeleting()) || ! $this->isSoftDelete())) {
-            $revisions[] = [
-                'revisionable_type' => $this->getMorphClass(),
-                'revisionable_id' => $this->getKey(),
+        if (! $this->revisionableEnabled()) {
+            return;
+        }
+
+        if (($this->isSoftDelete() && $this->isForceDeleting()) || ! $this->isSoftDelete()) {
+            $revisions = [[
                 'key' => self::CREATED_AT,
                 'old_value' => $this->{self::CREATED_AT},
                 'new_value' => null,
-                'user_id' => $this->getSystemUserId(),
-                'created_at' => new \DateTime,
-            ];
+            ]];
 
-            foreach ($revisions as $revision) {
-                Revision::create($revision);
-            }
-
-            Event::dispatch('revisionable.deleted', ['model' => $this, 'revisions' => $revisions]);
+            $this->insertRevisions($revisions, 'deleted');
         }
     }
 

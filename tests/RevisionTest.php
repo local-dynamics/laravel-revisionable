@@ -4,6 +4,7 @@ namespace LocalDynamics\Revisionable\Tests;
 
 use Hash;
 use LocalDynamics\Revisionable\Models\Revision;
+use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
 use PHPUnit\Framework\Attributes\Test;
@@ -118,6 +119,19 @@ class RevisionTest extends TestCase
     }
 
     #[Test]
+    public function force_delete_is_stored_as_a_revision()
+    {
+        $this->createUser();
+
+        $user = ForceDeleteUser::findOrFail(1);
+        $user->delete();
+
+        $this->assertCount(1, $user->revisionHistory);
+        $this->assertSame(User::CREATED_AT, $user->revisionHistory->first()->key);
+        $this->assertNull($user->revisionHistory->first()->new_value);
+    }
+
+    #[Test]
     public function revision_are_stored_once_even_with_event_listeners()
     {
         $user = $this->createUser();
@@ -126,8 +140,6 @@ class RevisionTest extends TestCase
         User::observe(UserObserverNotPaulUpdater::class);
 
         $user->update(['name' => 'Paul', 'password' => Hash::make('secret2')]);
-
-        //   dump($user->revisionHistory->map(function ($rev) { return ['key' => $rev->key, 'new' => $rev->new_value, 'old' => $rev->old_value]; }));
 
         $this->assertEquals(3, Revision::count());
     }
