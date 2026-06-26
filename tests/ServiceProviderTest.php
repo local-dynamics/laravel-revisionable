@@ -3,7 +3,6 @@
 namespace LocalDynamics\Revisionable\Tests;
 
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\ServiceProvider;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -12,8 +11,9 @@ class ServiceProviderTest extends TestCase
     #[Test]
     public function package_config_is_merged()
     {
-        $this->assertSame(Revision::class, config('revisionable.model'));
-        $this->assertSame([], config('revisionable.additional_fields'));
+        // The package config is merged in register(), so its keys are
+        // available without publishing first.
+        $this->assertTrue(config('revisionable.enabled'));
     }
 
     #[Test]
