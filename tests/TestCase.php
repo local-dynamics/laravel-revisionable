@@ -3,6 +3,7 @@
 namespace LocalDynamics\Revisionable\Tests;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use LocalDynamics\Revisionable\ServiceProvider;
 use LocalDynamics\Revisionable\Tests\Models\LimitedHistory\User as UserWithLimitedHistory;
 use LocalDynamics\Revisionable\Tests\Models\User;
@@ -18,6 +19,10 @@ class TestCase extends \Orchestra\Testbench\TestCase
         // making their firing order relative to user-registered observers
         // non-deterministic.
         Model::clearBootedModels();
+
+        // Reset any morph map a test registered so it does not leak.
+        Relation::morphMap([], false);
+        Relation::requireMorphMap(false);
 
         $this->loadLaravelMigrations();
 

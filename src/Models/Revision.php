@@ -72,7 +72,7 @@ class Revision extends Eloquent
         $which_value = $which.'_value';
 
         // First find the main model that was updated
-        $main_model = $this->revisionable_type;
+        $main_model = $this->getActualClassNameForMorph($this->revisionable_type);
         // Load it, WITH the related model
         if (class_exists($main_model)) {
             $main_model = new $main_model;
@@ -181,7 +181,7 @@ class Revision extends Eloquent
      */
     public function historyOf()
     {
-        if (class_exists($class = $this->revisionable_type)) {
+        if (class_exists($class = $this->getActualClassNameForMorph($this->revisionable_type))) {
             return $class::find($this->revisionable_id);
         }
 

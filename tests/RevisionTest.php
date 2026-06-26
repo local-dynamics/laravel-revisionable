@@ -3,6 +3,7 @@
 namespace LocalDynamics\Revisionable\Tests;
 
 use Hash;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LocalDynamics\Revisionable\Models\Revision;
@@ -96,6 +97,20 @@ class RevisionTest extends TestCase
         ]);
 
         $this->assertCount(2, $user->revisionHistory);
+    }
+
+    #[Test]
+    public function morph_mapped_revisions_resolve_their_model()
+    {
+        Relation::morphMap(['user_alias' => User::class]);
+
+        $user = $this->createUser();
+        $user->update(['name' => 'Spidey']);
+
+        $revision = $user->revisionHistory->first();
+
+        $this->assertSame('user_alias', $revision->revisionable_type);
+        $this->assertInstanceOf(User::class, $revision->historyOf());
     }
 
     #[Test]
