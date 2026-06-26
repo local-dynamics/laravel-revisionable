@@ -4,6 +4,7 @@ namespace LocalDynamics\Revisionable\Tests;
 
 use Hash;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
@@ -149,6 +150,24 @@ class RevisionTest extends TestCase
         Carbon::setTestNow();
 
         $this->assertEquals(3, Revision::count());
+    }
+
+    #[Test]
+    public function several_changed_fields_are_written_in_a_single_insert()
+    {
+        $user = $this->createUser();
+
+        DB::enableQueryLog();
+        $user->update([
+            'name' => 'Spiderman',
+            'email' => 'spidey@revisionable.test',
+        ]);
+        $inserts = collect(DB::getQueryLog())
+            ->filter(fn ($q) => str_contains($q['query'], 'insert into "revisions"'));
+        DB::disableQueryLog();
+
+        $this->assertCount(2, $user->revisionHistory);
+        $this->assertCount(1, $inserts);
     }
 
     #[Test]

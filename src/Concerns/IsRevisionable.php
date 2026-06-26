@@ -224,9 +224,7 @@ trait IsRevisionable
         }
         unset($revision);
 
-        foreach ($revisions as $revision) {
-            Revision::create($revision);
-        }
+        Revision::insert($revisions);
 
         Event::dispatch('revisionable.'.$event, ['model' => $this, 'revisions' => $revisions]);
     }
