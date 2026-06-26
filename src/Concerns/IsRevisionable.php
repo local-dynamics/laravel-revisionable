@@ -96,15 +96,7 @@ trait IsRevisionable
 
     private function revisionableEnabled(): bool
     {
-        if (! config('revisionable.enabled', true)) {
-            return false;
-        }
-
-        if (! isset($this->revisionEnabled)) {
-            return true;
-        }
-
-        return $this->revisionEnabled;
+        return (bool) config('revisionable.enabled', true) && $this->revisionEnabled;
     }
 
     public function postUpdate(): void
@@ -354,7 +346,7 @@ trait IsRevisionable
      */
     public function identifiableName(): string
     {
-        return $this->getKey();
+        return (string) $this->getKey();
     }
 
     /**
@@ -385,24 +377,22 @@ trait IsRevisionable
     }
 
     /**
-     * Disable a revisionable field temporarily
-     * Need to do the adding to array longhanded, as there's a
-     * PHP bug https://bugs.php.net/bug.php?id=42030
+     * Disable one or more revisionable fields temporarily.
+     *
+     * dontKeepRevisionOf is resolved through Eloquent's __get/__set, so it
+     * cannot be appended to in place ("indirect modification of overloaded
+     * property"). Build the list in a local variable and assign it back.
      */
-    public function disableRevisionField(mixed $field): void
+    public function disableRevisionField(array|string $field): void
     {
         if (! isset($this->dontKeepRevisionOf)) {
             $this->dontKeepRevisionOf = [];
         }
-        if (is_array($field)) {
-            foreach ($field as $one_field) {
-                $this->disableRevisionField($one_field);
-            }
-        } else {
-            $ignoredFields = $this->dontKeepRevisionOf;
-            $ignoredFields[] = $field;
-            $this->dontKeepRevisionOf = $ignoredFields;
-            unset($ignoredFields);
+
+        $ignored = $this->dontKeepRevisionOf;
+        foreach ((array) $field as $one_field) {
+            $ignored[] = $one_field;
         }
+        $this->dontKeepRevisionOf = $ignored;
     }
 }

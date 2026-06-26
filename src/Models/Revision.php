@@ -13,9 +13,9 @@ use LocalDynamics\Revisionable\FieldFormatter;
  * LocalDynamics\Revisionable\Models\Revision
  *
  * @property int $id
- * @property int $revisionable_type
+ * @property string $revisionable_type
  * @property int $revisionable_id
- * @property int $revision
+ * @property string|null $revision
  * @property string|null $process
  * @property string $key
  * @property string|null $old_value

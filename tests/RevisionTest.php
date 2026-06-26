@@ -130,6 +130,25 @@ class RevisionTest extends TestCase
     }
 
     #[Test]
+    public function disable_revision_field_skips_those_fields()
+    {
+        $user = $this->createUser();
+
+        $user->disableRevisionField(['name', 'email']);
+        $user->update([
+            'name' => 'Spiderman',
+            'email' => 'spidey@revisionable.test',
+            'password' => Hash::make('secret2'),
+        ]);
+
+        $keys = $user->revisionHistory->pluck('key');
+
+        $this->assertFalse($keys->contains('name'));
+        $this->assertFalse($keys->contains('email'));
+        $this->assertTrue($keys->contains('password'));
+    }
+
+    #[Test]
     public function revision_of_carbon_dates()
     {
         $user = $this->createUser();
