@@ -119,26 +119,27 @@ trait IsRevisionable
             return;
         }
 
-        $maxRevisionCountReached = (property_exists($this, 'historyLimit')
-            && $this->revisionHistory()->count() >= $this->historyLimit);
+        $hasLimit = property_exists($this, 'historyLimit');
+        $cleanup = $this->revisionCleanup ?? false;
 
-        if ($maxRevisionCountReached && ! ($this->revisionCleanup ?? false)) {
+        // Without cleanup, the history limit simply stops further tracking
+        // once it has been reached.
+        if ($hasLimit && ! $cleanup && $this->revisionHistory()->count() >= $this->historyLimit) {
             return;
         }
 
-        $revisions = $this->changedRevisionableFields();
+        $this->insertRevisions($this->changedRevisionableFields(), 'saved');
 
-        if (count($revisions) && $maxRevisionCountReached && ($this->revisionCleanup ?? false)) {
-            foreach ($this->revisionHistory()
-                ->orderBy('id')
-                ->offset($this->historyLimit - 1)
-                ->limit(1000)
-                ->cursor() as $revision) {
-                $revision->delete();
-            }
+        // With cleanup, keep only the newest $historyLimit revisions and
+        // prune everything older in a single query.
+        if ($hasLimit && $cleanup) {
+            $keepIds = $this->revisionHistory()
+                ->orderByDesc('id')
+                ->limit($this->historyLimit)
+                ->pluck('id');
+
+            $this->revisionHistory()->whereKeyNot($keepIds)->delete();
         }
-
-        $this->insertRevisions($revisions, 'saved');
 
         $this->originalData = [];
         $this->updatedData = [];

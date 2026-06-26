@@ -134,6 +134,23 @@ class RevisionTest extends TestCase
     }
 
     #[Test]
+    public function cleanup_keeps_the_newest_revisions()
+    {
+        $user = $this->createUserWithLimitedHistory();
+        $limit = $user->getHistoryLimit();
+
+        for ($i = 1; $i <= $limit + 5; $i++) {
+            $user->update(['name' => 'v'.$i]);
+        }
+
+        $this->assertEquals($limit, Revision::count());
+        // The most recent change must be retained ...
+        $this->assertSame('v'.($limit + 5), Revision::orderByDesc('id')->first()->new_value);
+        // ... and the five oldest changes must have been pruned.
+        $this->assertSame('v6', Revision::orderBy('id')->first()->new_value);
+    }
+
+    #[Test]
     public function revision_are_stored_once_even_with_event_listeners()
     {
         Carbon::setTestNow('2020-01-01 00:00:00');
