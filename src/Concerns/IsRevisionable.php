@@ -2,6 +2,7 @@
 
 namespace LocalDynamics\Revisionable\Concerns;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
@@ -138,6 +139,27 @@ trait IsRevisionable
     }
 
     /**
+     * The most recent revisions across every instance of this model.
+     */
+    public static function classRevisionHistory(int $limit = 100, string $order = 'desc'): Collection
+    {
+        return Revision::query()
+            ->where('revisionable_type', (new static)->getMorphClass())
+            ->orderBy('id', $order)
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Resolve the id of the user responsible for a revision. Override this in
+     * your model to source it from somewhere other than the default guard.
+     */
+    public function getSystemUserId(): int|string|null
+    {
+        return auth()->id();
+    }
+
+    /**
      * Get all the changes that have been made, that are also supposed
      * to have their changes recorded
      *
@@ -226,7 +248,7 @@ trait IsRevisionable
             'key' => null,
             'old_value' => null,
             'new_value' => null,
-            'user_id' => auth()->id(),
+            'user_id' => $this->getSystemUserId(),
             'created_at' => now(),
         ];
 

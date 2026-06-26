@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LocalDynamics\Revisionable\Models\Revision;
+use LocalDynamics\Revisionable\Tests\Models\AuditedUser;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
@@ -41,6 +42,37 @@ class RevisionTest extends TestCase
         $this->assertArrayHasKey('settingA', $user->settings);
         $this->assertArrayHasKey('settingB', $user->settings);
         $this->assertArrayHasKey('settingC', $user->settings);
+    }
+
+    #[Test]
+    public function the_system_user_id_hook_is_used_for_user_id()
+    {
+        $this->createUser();
+
+        $user = AuditedUser::findOrFail(1);
+        $user->update(['name' => 'Spiderman']);
+
+        $this->assertSame(42, $user->revisionHistory->first()->user_id);
+    }
+
+    #[Test]
+    public function class_revision_history_returns_changes_across_instances()
+    {
+        $peter = $this->createUser();
+        $peter->update(['name' => 'Spiderman']);
+
+        $james = User::create([
+            'name' => 'James Judd',
+            'email' => 'james.judd@revisionable.test',
+            'password' => Hash::make('456'),
+        ]);
+        $james->update(['name' => 'Wolverine']);
+
+        $history = User::classRevisionHistory();
+
+        $this->assertCount(2, $history);
+        // Newest first by default.
+        $this->assertSame('Wolverine', $history->first()->new_value);
     }
 
     #[Test]

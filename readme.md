@@ -256,6 +256,17 @@ $article = Article::find($id);
 $history = $article->revisionHistory;
 ```
 
+To load the most recent revisions across **all** instances of a model, use the
+static `classRevisionHistory` method:
+
+```php
+// the 100 most recent revisions of any Article, newest first
+$history = Article::classRevisionHistory();
+
+// customise the amount and order
+$history = Article::classRevisionHistory(limit: 25, order: 'asc');
+```
+
 
 <a name="display"></a>
 ## Displaying history
@@ -290,6 +301,25 @@ relation. Access it as a property (`$history->user`) to get the user model, or
 `null` if there was no authenticated user when the revision was recorded.  
 The user model that is loaded is the one configured under
 `auth.providers.users.model` in your `config/auth.php`.
+
+The id stored against each revision comes from `getSystemUserId()`, which
+returns `auth()->id()` by default. Override it in your model if the responsible
+user should be resolved from somewhere else (a custom guard, an impersonation
+context, a queue/system user, etc.):
+
+```php
+use LocalDynamics\Revisionable\Concerns\IsRevisionable;
+
+class Article extends \Illuminate\Database\Eloquent\Model
+{
+    use IsRevisionable;
+
+    public function getSystemUserId(): int|string|null
+    {
+        return backpack_auth()->id() ?? auth()->id();
+    }
+}
+```
 
 
 ### fieldName()
