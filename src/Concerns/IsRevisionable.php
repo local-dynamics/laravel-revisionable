@@ -84,6 +84,15 @@ trait IsRevisionable
             ? array_merge($this->keepRevisionOf, $this->doKeep)
             : $this->doKeep;
 
+        // Eloquent's own timestamps are never meaningful revisions: updated_at
+        // changes on every save, and created_at is tracked explicitly via
+        // postCreate(). deleted_at is intentionally left trackable so soft
+        // deletes are still recorded.
+        if ($this->usesTimestamps()) {
+            $this->dontKeep[] = $this->getCreatedAtColumn();
+            $this->dontKeep[] = $this->getUpdatedAtColumn();
+        }
+
         unset($this->attributes['dontKeepRevisionOf']);
         unset($this->attributes['keepRevisionOf']);
 

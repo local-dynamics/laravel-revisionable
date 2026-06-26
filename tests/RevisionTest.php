@@ -3,6 +3,7 @@
 namespace LocalDynamics\Revisionable\Tests;
 
 use Hash;
+use Illuminate\Support\Carbon;
 use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
@@ -134,13 +135,36 @@ class RevisionTest extends TestCase
     #[Test]
     public function revision_are_stored_once_even_with_event_listeners()
     {
+        Carbon::setTestNow('2020-01-01 00:00:00');
         $user = $this->createUser();
         $this->assertEquals(0, Revision::count());
 
         User::observe(UserObserverNotPaulUpdater::class);
 
+        // Advance the clock so the updated_at timestamp actually changes.
+        // The observer triggers a nested save() from within the updated
+        // event, which used to leak an extra updated_at revision.
+        Carbon::setTestNow('2020-01-01 00:00:05');
         $user->update(['name' => 'Paul', 'password' => Hash::make('secret2')]);
+        Carbon::setTestNow();
 
         $this->assertEquals(3, Revision::count());
+    }
+
+    #[Test]
+    public function timestamps_are_not_revisioned()
+    {
+        Carbon::setTestNow('2020-01-01 00:00:00');
+        $user = $this->createUser();
+
+        Carbon::setTestNow('2020-01-01 00:00:05');
+        $user->update(['name' => 'Spiderman']);
+        Carbon::setTestNow();
+
+        $keys = $user->revisionHistory->pluck('key');
+
+        $this->assertTrue($keys->contains('name'));
+        $this->assertFalse($keys->contains('updated_at'));
+        $this->assertFalse($keys->contains('created_at'));
     }
 }
