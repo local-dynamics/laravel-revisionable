@@ -6,10 +6,11 @@ use Hash;
 use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\User;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
+use PHPUnit\Framework\Attributes\Test;
 
 class RevisionTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function user_table_is_working()
     {
         $this->createUser();
@@ -19,7 +20,7 @@ class RevisionTest extends TestCase
         $this->assertTrue(Hash::check('secret', $user->password));
     }
 
-    /** @test */
+    #[Test]
     public function user_setting_is_an_array()
     {
         $this->createUser([
@@ -38,7 +39,7 @@ class RevisionTest extends TestCase
         $this->assertArrayHasKey('settingC', $user->settings);
     }
 
-    /** @test */
+    #[Test]
     public function revisions_get_stored()
     {
         $user = $this->createUser();
@@ -50,7 +51,7 @@ class RevisionTest extends TestCase
         $this->assertCount(2, $user->revisionHistory);
     }
 
-    /** @test */
+    #[Test]
     public function revisions_dont_get_stored_if_config_disabled()
     {
         $user = $this->createUser();
@@ -62,7 +63,7 @@ class RevisionTest extends TestCase
         $this->assertCount(0, $user->revisionHistory);
     }
 
-    /** @test */
+    #[Test]
     public function revisions_of_array_fields_get_stored()
     {
         $user = User::create([
@@ -94,7 +95,7 @@ class RevisionTest extends TestCase
         $this->assertCount(2, $user->revisionHistory);
     }
 
-    /** @test */
+    #[Test]
     public function revision_of_carbon_dates()
     {
         $user = $this->createUser();
@@ -104,7 +105,7 @@ class RevisionTest extends TestCase
         $this->assertCount(1, $user->revisionHistory);
     }
 
-    /** @test */
+    #[Test]
     public function revision_history_is_limited()
     {
         $user = $this->createUserWithLimitedHistory();
@@ -116,7 +117,7 @@ class RevisionTest extends TestCase
         $this->assertEquals($user->getHistoryLimit(), Revision::count());
     }
 
-    /** @test */
+    #[Test]
     public function revision_are_stored_once_even_with_event_listeners()
     {
         $user = $this->createUser();

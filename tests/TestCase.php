@@ -12,17 +12,11 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         parent::setUp();
 
-        $this->loadLaravelMigrations(['--database' => 'testing']);
+        $this->loadLaravelMigrations();
 
-        $this->loadMigrationsFrom([
-            '--database' => 'testing',
-            '--path' => realpath(__DIR__.'/../src/migrations'),
-        ]);
+        $this->loadMigrationsFrom(realpath(__DIR__.'/../src/migrations'));
 
-        $this->loadMigrationsFrom([
-            '--database' => 'testing',
-            '--path' => realpath(__DIR__.'/../tests/migrations'),
-        ]);
+        $this->loadMigrationsFrom(realpath(__DIR__.'/../tests/migrations'));
     }
 
     protected function getPackageProviders($app): array
