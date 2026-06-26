@@ -57,17 +57,11 @@ trait IsRevisionable
         $this->updatedData = $this->attributes;
 
         // we can only safely compare basic items,
-        // so for now we drop any object based items, like DateTime
+        // so for now we drop any object based items, like DateTime.
+        // JSON-cast attributes are compared canonically later, in
+        // changedRevisionableFields(), so no normalisation is needed here.
         foreach ($this->updatedData as $key => $val) {
-            $castCheck = ['object', 'array'];
-            if (isset($this->casts[$key])
-                && in_array(gettype($val), $castCheck)
-                && in_array($this->casts[$key], $castCheck)
-                && isset($this->originalData[$key])
-            ) {
-                $this->updatedData[$key] = json_encode(FieldModifier::sortJsonKeys(json_decode($this->updatedData[$key], true)));
-                $this->originalData[$key] = json_encode(FieldModifier::sortJsonKeys(json_decode($this->originalData[$key], true)));
-            } elseif (gettype($val) == 'object' && ! method_exists($val, '__toString')) {
+            if (is_object($val) && ! method_exists($val, '__toString')) {
                 unset($this->originalData[$key]);
                 unset($this->updatedData[$key]);
                 $this->dontKeep[] = $key;
@@ -162,11 +156,13 @@ trait IsRevisionable
         $relevantChanges = [];
         foreach ($this->dirtyData as $key => $newValue) {
             if ($this->isRevisionable($key) && ! is_array($newValue)) {
-                $oldValue = array_key_exists($key, $this->lastRevisionAttributes)
-                    ? FieldModifier::convertValue(Arr::get($this->lastRevisionAttributes, $key))
-                    : FieldModifier::convertValue(Arr::get($this->originalData, $key));
+                $oldRaw = array_key_exists($key, $this->lastRevisionAttributes)
+                    ? Arr::get($this->lastRevisionAttributes, $key)
+                    : Arr::get($this->originalData, $key);
 
-                if (! array_key_exists($key, $this->originalData) || $oldValue != $newValue) {
+                $oldValue = FieldModifier::convertValue($oldRaw);
+
+                if (! array_key_exists($key, $this->originalData) || $this->revisionValueChanged($key, $oldRaw, $newValue)) {
                     $relevantChanges[] = [
                         'key' => $key,
                         'old_value' => $oldValue,
@@ -200,6 +196,28 @@ trait IsRevisionable
         }
 
         return empty($this->doKeep);
+    }
+
+    /**
+     * Decide whether a field actually changed. For JSON-cast attributes the
+     * database may re-order object keys on write, so compare them canonically
+     * to avoid recording a revision for a mere key re-ordering.
+     */
+    private function revisionValueChanged(string $key, $oldValue, $newValue): bool
+    {
+        if ($this->isJsonCast($key)) {
+            return FieldModifier::canonicalJson($oldValue) !== FieldModifier::canonicalJson($newValue);
+        }
+
+        return FieldModifier::convertValue($oldValue) != $newValue;
+    }
+
+    private function isJsonCast(string $key): bool
+    {
+        $casts = $this->getCasts();
+
+        return isset($casts[$key])
+            && in_array($casts[$key], ['array', 'json', 'object', 'collection'], true);
     }
 
     private function insertRevisions(array $revisions, string $event): void

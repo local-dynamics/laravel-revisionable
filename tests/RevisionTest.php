@@ -99,6 +99,22 @@ class RevisionTest extends TestCase
     }
 
     #[Test]
+    public function reordering_json_keys_does_not_create_a_revision()
+    {
+        $user = User::create([
+            'name' => 'James Judd',
+            'email' => 'james.judd@revisionable.test',
+            'password' => Hash::make('456'),
+            'settings' => ['alpha' => 1, 'b' => 2, 'gamma' => 3],
+        ]);
+
+        // Same data, different key order (as a database may store/return it).
+        $user->update(['settings' => ['b' => 2, 'gamma' => 3, 'alpha' => 1]]);
+
+        $this->assertFalse($user->revisionHistory->pluck('key')->contains('settings'));
+    }
+
+    #[Test]
     public function revision_of_carbon_dates()
     {
         $user = $this->createUser();
