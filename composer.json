@@ -22,8 +22,8 @@
   ],
   "require": {
     "php": ">=8.4",
-    "illuminate/support": "^v11.0|^v12.0|^v13.0",
-    "laravel/framework": "^v11.0|^12.1.1|^13.0",
+    "illuminate/support": "^11.0|^12.0|^13.0",
+    "illuminate/database": "^11.0|^12.0|^13.0",
     "ext-json": "*"
   },
   "autoload": {
