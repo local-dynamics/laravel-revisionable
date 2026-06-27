@@ -10,6 +10,7 @@ use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\AuditedUser;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
+use LocalDynamics\Revisionable\Tests\Observers\UserChainObserver;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -230,6 +231,42 @@ class RevisionTest extends TestCase
         $this->assertSame('v'.($limit + 5), Revision::orderByDesc('id')->first()->new_value);
         // ... and the five oldest changes must have been pruned.
         $this->assertSame('v6', Revision::orderBy('id')->first()->new_value);
+    }
+
+    #[Test]
+    public function the_revision_state_stack_does_not_leak()
+    {
+        $user = $this->createUser();   // create: saving push, saved pop
+        $user->update(['name' => 'A']); // update: push, pop
+        $user->save();                  // no-op save: updated never fires, saved still pops
+
+        $stack = (new \ReflectionProperty($user, 'revisionStack'))->getValue($user);
+
+        $this->assertSame([], $stack);
+    }
+
+    #[Test]
+    public function nested_save_chain_records_a_clean_revision_chain()
+    {
+        Carbon::setTestNow('2020-01-01 00:00:00');
+        $user = $this->createUser();
+
+        User::observe(UserChainObserver::class);
+
+        Carbon::setTestNow('2020-01-01 00:00:05');
+        $user->update(['name' => 'Paul']);
+        Carbon::setTestNow();
+
+        $chain = Revision::where('key', 'name')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($r) => $r->old_value.'->'.$r->new_value)
+            ->all();
+
+        $this->assertSame(
+            ['Peter Parker->Paul', 'Paul->Mary', 'Mary->Jane'],
+            $chain
+        );
     }
 
     #[Test]
