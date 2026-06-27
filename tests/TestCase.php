@@ -2,6 +2,8 @@
 
 namespace LocalDynamics\Revisionable\Tests;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use LocalDynamics\Revisionable\ServiceProvider;
 use LocalDynamics\Revisionable\Tests\Models\LimitedHistory\User as UserWithLimitedHistory;
 use LocalDynamics\Revisionable\Tests\Models\User;
@@ -12,17 +14,21 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         parent::setUp();
 
-        $this->loadLaravelMigrations(['--database' => 'testing']);
+        // Force every model to re-boot against the current event dispatcher.
+        // Without this the trait's model-event listeners leak between tests,
+        // making their firing order relative to user-registered observers
+        // non-deterministic.
+        Model::clearBootedModels();
 
-        $this->loadMigrationsFrom([
-            '--database' => 'testing',
-            '--path' => realpath(__DIR__.'/../src/migrations'),
-        ]);
+        // Reset any morph map a test registered so it does not leak.
+        Relation::morphMap([], false);
+        Relation::requireMorphMap(false);
 
-        $this->loadMigrationsFrom([
-            '--database' => 'testing',
-            '--path' => realpath(__DIR__.'/../tests/migrations'),
-        ]);
+        $this->loadLaravelMigrations();
+
+        $this->loadMigrationsFrom(realpath(__DIR__.'/../src/migrations'));
+
+        $this->loadMigrationsFrom(realpath(__DIR__.'/../tests/migrations'));
     }
 
     protected function getPackageProviders($app): array

@@ -1,6 +1,6 @@
 # Revisons for Laravel Eloquent 
 
-[![Laravel 5.8](https://img.shields.io/badge/Laravel-5.x-brightgreen.svg?style=flat-square)](https://laravel.com/)
+[![Laravel 11.x | 12.x | 13.x](https://img.shields.io/badge/Laravel-11.x%20%7C%2012.x%20%7C%2013.x-brightgreen.svg?style=flat-square)](https://laravel.com/)
 [![Latest Version](https://img.shields.io/github/release/local-dynamics/laravel-revisionable.svg?style=flat-square)](https://packagist.org/packages/local-dynamics/laravel-revisionable)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://tldrlegal.com/license/mit-license)
 
@@ -16,35 +16,24 @@ Revisionable is a laravel package that allows you to keep a revision history for
 
 ## Installation
 
-Revisionable is installable via [composer](https://getcomposer.org/doc/00-intro.md), the details are on [packagist, here.](https://packagist.org/packages/LocalDynamics/revisionable)
+Revisionable is installable via [composer](https://getcomposer.org/doc/00-intro.md), the details are on [packagist, here.](https://packagist.org/packages/local-dynamics/laravel-revisionable)
 
-Add the following to the `require` section of your projects composer.json file:
-
-```php
-"local-dynamics/laravel-revisionable": "1.*",
-```
-
-Run composer update to download the package
+Require the package:
 
 ```
-php composer.phar update
+composer require local-dynamics/laravel-revisionable
 ```
 
-Open config/app.php and register the required service provider
+The service provider is registered automatically through Laravel's package
+discovery, so there is nothing to add to `config/app.php`.
 
-```
-'providers' => [
-    LocalDynamics\Revisionable\ServiceProvider::class,
-]
-```
-
-Publish the configuration and migrations
+Publish the configuration and migrations:
 
 ```
 php artisan vendor:publish --provider="LocalDynamics\Revisionable\ServiceProvider"
 ```
 
-Finally, you'll also need to run migration on the package
+Finally, run the migration to create the `revisions` table:
 
 ```
 php artisan migrate
@@ -267,6 +256,17 @@ $article = Article::find($id);
 $history = $article->revisionHistory;
 ```
 
+To load the most recent revisions across **all** instances of a model, use the
+static `classRevisionHistory` method:
+
+```php
+// the 100 most recent revisions of any Article, newest first
+$history = Article::classRevisionHistory();
+
+// customise the amount and order
+$history = Article::classRevisionHistory(limit: 25, order: 'asc');
+```
+
 
 <a name="display"></a>
 ## Displaying history
@@ -277,7 +277,7 @@ The above would be the result from this:
 
 ```php
 @foreach($account->revisionHistory as $history )
-    <li>{{ $history->userResponsible()->first_name }} changed {{ $history->fieldName() }} from {{ $history->oldValue() }} to {{ $history->newValue() }}</li>
+    <li>{{ $history->user?->name }} changed {{ $history->fieldName() }} from {{ $history->oldValue() }} to {{ $history->newValue() }}</li>
 @endforeach
 ```
 
@@ -286,18 +286,40 @@ If you have enabled revisions of creations as well you can display it like this:
 ```php
 @foreach($resource->revisionHistory as $history)
   @if($history->key == 'created_at' && !$history->old_value)
-    <li>{{ $history->userResponsible()->first_name }} created this resource at {{ $history->newValue() }}</li>
+    <li>{{ $history->user?->name }} created this resource at {{ $history->newValue() }}</li>
   @else
-    <li>{{ $history->userResponsible()->first_name }} changed {{ $history->fieldName() }} from {{ $history->oldValue() }} to {{ $history->newValue() }}</li>
+    <li>{{ $history->user?->name }} changed {{ $history->fieldName() }} from {{ $history->oldValue() }} to {{ $history->newValue() }}</li>
   @endif
 @endforeach
 ```
 
 
-### userResponsible()
+### user()
 
-Returns the User that was responsible for making the revision. A user model is returned, or null if there was no user recorded.  
-The user model that is loaded depends on what you have set in your `config/auth.php` file for the `model` variable.
+Returns the User that was responsible for making the revision, as a `belongsTo`
+relation. Access it as a property (`$history->user`) to get the user model, or
+`null` if there was no authenticated user when the revision was recorded.  
+The user model that is loaded is the one configured under
+`auth.providers.users.model` in your `config/auth.php`.
+
+The id stored against each revision comes from `getSystemUserId()`, which
+returns `auth()->id()` by default. Override it in your model if the responsible
+user should be resolved from somewhere else (a custom guard, an impersonation
+context, a queue/system user, etc.):
+
+```php
+use LocalDynamics\Revisionable\Concerns\IsRevisionable;
+
+class Article extends \Illuminate\Database\Eloquent\Model
+{
+    use IsRevisionable;
+
+    public function getSystemUserId(): int|string|null
+    {
+        return backpack_auth()->id() ?? auth()->id();
+    }
+}
+```
 
 
 ### fieldName()

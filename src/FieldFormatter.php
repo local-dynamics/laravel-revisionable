@@ -6,24 +6,22 @@ use DateTime;
 
 class FieldFormatter
 {
-    public static function isEmpty($value, array $options = []): string
+    public static function isEmpty($value, ?string $options = null): string
     {
         $value_set = isset($value) && $value != '';
 
         return sprintf(self::boolean($value_set, $options), $value);
     }
 
-    public static function boolean($value, ?array $options = null): string
+    public static function boolean($value, ?string $options = null): string
     {
-        if (! is_null($options)) {
-            $options = explode('|', $options);
-        }
+        $options = is_null($options) ? [] : explode('|', $options);
 
         if (count($options) != 2) {
             $options = ['No', 'Yes'];
         }
 
-        return $options[(bool) $value];
+        return $options[(int) (bool) $value];
     }
 
     public static function string($value, $format = null): string

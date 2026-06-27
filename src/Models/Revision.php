@@ -3,7 +3,9 @@
 namespace LocalDynamics\Revisionable\Models;
 
 use Exception;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use LocalDynamics\Revisionable\FieldFormatter;
 
@@ -11,17 +13,17 @@ use LocalDynamics\Revisionable\FieldFormatter;
  * LocalDynamics\Revisionable\Models\Revision
  *
  * @property int $id
- * @property int $revisionable_type
+ * @property string $revisionable_type
  * @property int $revisionable_id
- * @property int $revision
+ * @property string|null $revision
  * @property string|null $process
  * @property string $key
  * @property string|null $old_value
  * @property string|null $new_value
  * @property int|null $user_id
- * @property \Illuminate\Support\Carbon|null $created_at
+ * @property Carbon|null $created_at
  * @property-read Eloquent|\Eloquent $revisionable
- * @property-read \App\Models\User|null $user
+ * @property-read Authenticatable|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder|Revision newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Revision newQuery()
@@ -70,7 +72,7 @@ class Revision extends Eloquent
         $which_value = $which.'_value';
 
         // First find the main model that was updated
-        $main_model = $this->revisionable_type;
+        $main_model = $this->getActualClassNameForMorph($this->revisionable_type);
         // Load it, WITH the related model
         if (class_exists($main_model)) {
             $main_model = new $main_model;
@@ -161,7 +163,7 @@ class Revision extends Eloquent
 
     public function user()
     {
-        return $this->belongsTo(config('auth.model') ?? config('auth.providers.users.model'));
+        return $this->belongsTo(config('auth.providers.users.model'));
     }
 
     /*
@@ -179,7 +181,7 @@ class Revision extends Eloquent
      */
     public function historyOf()
     {
-        if (class_exists($class = $this->revisionable_type)) {
+        if (class_exists($class = $this->getActualClassNameForMorph($this->revisionable_type))) {
             return $class::find($this->revisionable_id);
         }
 
