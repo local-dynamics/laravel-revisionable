@@ -202,7 +202,16 @@ trait IsRevisionable
                 ? Arr::get($this->lastRevisionAttributes, $key)
                 : Arr::get($frame['original'], $key);
 
-            if (! array_key_exists($key, $frame['original']) || $this->revisionValueChanged($key, $oldRaw, $newValue)) {
+            // A key missing from $original was never loaded or written, so there is nothing to compare
+            // against — Eloquent reports it dirty whatever its value. Setting it to null is not a change,
+            // though: recording it wrote a "null → null" revision for every such key on the first save
+            // after a partial insert. Compared strictly, because loosely null == 0 == false == '' and a
+            // first 0 or false is a real value worth keeping.
+            $changed = array_key_exists($key, $frame['original']) || array_key_exists($key, $this->lastRevisionAttributes)
+                ? $this->revisionValueChanged($key, $oldRaw, $newValue)
+                : $newValue !== null;
+
+            if ($changed) {
                 $relevantChanges[] = [
                     'key' => $key,
                     'old_value' => FieldModifier::convertValue($oldRaw),

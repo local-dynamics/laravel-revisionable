@@ -307,6 +307,31 @@ class RevisionTest extends TestCase
     }
 
     #[Test]
+    public function setting_a_never_loaded_key_to_null_is_not_a_revision()
+    {
+        $user = $this->createUser();
+        $user = User::select(['id', 'name', 'email'])->findOrFail($user->id);
+
+        $user->logged_in_at = null;
+        $user->name = 'Spiderman';
+        $user->save();
+
+        $this->assertSame(['name'], $user->revisionHistory->pluck('key')->all());
+    }
+
+    #[Test]
+    public function a_never_loaded_key_with_a_value_is_still_a_revision()
+    {
+        $user = $this->createUser();
+        $user = User::select(['id', 'name', 'email'])->findOrFail($user->id);
+
+        $user->settings = ['settingA' => false];
+        $user->save();
+
+        $this->assertSame(['settings'], $user->revisionHistory->pluck('key')->all());
+    }
+
+    #[Test]
     public function timestamps_are_not_revisioned()
     {
         Carbon::setTestNow('2020-01-01 00:00:00');
