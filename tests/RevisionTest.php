@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use LocalDynamics\Revisionable\Models\Revision;
 use LocalDynamics\Revisionable\Tests\Models\AuditedUser;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
+use LocalDynamics\Revisionable\Tests\Models\InitialFillUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
 use LocalDynamics\Revisionable\Tests\Observers\UserChainObserver;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
@@ -346,5 +347,75 @@ class RevisionTest extends TestCase
         $this->assertTrue($keys->contains('name'));
         $this->assertFalse($keys->contains('updated_at'));
         $this->assertFalse($keys->contains('created_at'));
+    }
+
+    #[Test]
+    public function initial_fill_is_revisioned_by_default()
+    {
+        $user = $this->createUser();
+
+        $user->update(['remember_token' => 'abc']);
+
+        $this->assertSame(['remember_token'], $user->revisionHistory->pluck('key')->all());
+    }
+
+    #[Test]
+    public function initial_fill_within_the_window_is_not_revisioned()
+    {
+        $user = $this->createInitialFillUser();
+
+        $user->update(['remember_token' => 'abc', 'name' => 'Spiderman']);
+
+        $this->assertSame(['name'], $user->revisionHistory->pluck('key')->all());
+    }
+
+    #[Test]
+    public function initial_fill_window_applies_to_freshly_loaded_models()
+    {
+        Carbon::setTestNow('2020-01-01 00:00:00');
+        $id = $this->createInitialFillUser()->id;
+
+        Carbon::setTestNow('2020-01-01 00:04:59');
+        $user = InitialFillUser::findOrFail($id);
+        $user->update(['remember_token' => 'abc']);
+        Carbon::setTestNow();
+
+        $this->assertCount(0, $user->revisionHistory);
+    }
+
+    #[Test]
+    public function initial_fill_after_the_window_is_revisioned()
+    {
+        Carbon::setTestNow('2020-01-01 00:00:00');
+        $id = $this->createInitialFillUser()->id;
+
+        Carbon::setTestNow('2020-01-01 00:05:01');
+        $user = InitialFillUser::findOrFail($id);
+        $user->update(['remember_token' => 'abc']);
+        Carbon::setTestNow();
+
+        $this->assertSame(['remember_token'], $user->revisionHistory->pluck('key')->all());
+    }
+
+    #[Test]
+    public function a_change_after_a_skipped_initial_fill_keeps_the_filled_value_as_old_value()
+    {
+        $user = $this->createInitialFillUser();
+
+        $user->update(['remember_token' => 'abc']);
+        $user->update(['remember_token' => 'def']);
+
+        $revision = $user->revisionHistory->sole();
+        $this->assertSame('abc', $revision->old_value);
+        $this->assertSame('def', $revision->new_value);
+    }
+
+    private function createInitialFillUser(): InitialFillUser
+    {
+        return InitialFillUser::create([
+            'name' => 'Peter Parker',
+            'email' => 'peter.parker@revisionable.test',
+            'password' => Hash::make('secret'),
+        ]);
     }
 }

@@ -193,6 +193,8 @@ trait IsRevisionable
     private function changedRevisionableFields(array $frame): array
     {
         $relevantChanges = [];
+        $withinInitialFill = $this->withinInitialFillWindow();
+
         foreach ($frame['dirty'] as $key => $newValue) {
             if (! $this->isRevisionable($key, $frame) || is_array($newValue)) {
                 continue;
@@ -211,6 +213,15 @@ trait IsRevisionable
                 ? $this->revisionValueChanged($key, $oldRaw, $newValue)
                 : $newValue !== null;
 
+            // Filling a null right after creation adds no history: the value is the old_value of the
+            // next revision of that key, or still the current value. The last recorded value is kept
+            // all the same, so a later change on this instance still starts from the filled value.
+            if ($changed && $withinInitialFill && $oldRaw === null) {
+                $this->lastRevisionAttributes[$key] = $newValue;
+
+                continue;
+            }
+
             if ($changed) {
                 $relevantChanges[] = [
                     'key' => $key,
@@ -222,6 +233,27 @@ trait IsRevisionable
         }
 
         return $relevantChanges;
+    }
+
+    /**
+     * Whether the model is still in its initial fill window, set in seconds by
+     * $revisionInitialFillWindow. Measured from created_at, so it also covers
+     * models re-loaded by a later job; without timestamps only the instance
+     * that created the model counts.
+     */
+    private function withinInitialFillWindow(): bool
+    {
+        $window = (int) ($this->revisionInitialFillWindow ?? 0);
+
+        if ($window <= 0) {
+            return false;
+        }
+
+        if ($this->usesTimestamps() && ($createdAt = $this->{$this->getCreatedAtColumn()})) {
+            return $this->asDateTime($createdAt)->gte(now()->subSeconds($window));
+        }
+
+        return $this->wasRecentlyCreated;
     }
 
     /**
