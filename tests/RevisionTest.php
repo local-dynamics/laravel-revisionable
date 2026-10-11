@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LocalDynamics\Revisionable\Models\Revision;
+use LocalDynamics\Revisionable\Tests\Models\AuditedInitialFillUser;
 use LocalDynamics\Revisionable\Tests\Models\AuditedUser;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\InitialFillUser;
@@ -408,6 +409,22 @@ class RevisionTest extends TestCase
         $revision = $user->revisionHistory->sole();
         $this->assertSame('abc', $revision->old_value);
         $this->assertSame('def', $revision->new_value);
+    }
+
+    #[Test]
+    public function initial_fill_by_a_user_is_revisioned()
+    {
+        $user = AuditedInitialFillUser::create([
+            'name' => 'Peter Parker',
+            'email' => 'peter.parker@revisionable.test',
+            'password' => Hash::make('secret'),
+        ]);
+
+        $user->update(['remember_token' => 'abc']);
+
+        $revision = $user->revisionHistory->sole();
+        $this->assertSame('remember_token', $revision->key);
+        $this->assertSame(42, $revision->user_id);
     }
 
     private function createInitialFillUser(): InitialFillUser
