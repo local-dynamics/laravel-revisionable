@@ -239,13 +239,14 @@ trait IsRevisionable
      * Whether the model is still in its initial fill window, set in seconds by
      * $revisionInitialFillWindow. Measured from created_at, so it also covers
      * models re-loaded by a later job; without timestamps only the instance
-     * that created the model counts.
+     * that created the model counts. Only system saves (no user id) qualify:
+     * a value a user fills in must stay attributable in the audit log.
      */
     private function withinInitialFillWindow(): bool
     {
         $window = (int) ($this->revisionInitialFillWindow ?? 0);
 
-        if ($window <= 0) {
+        if ($window <= 0 || $this->getSystemUserId() !== null) {
             return false;
         }
 
