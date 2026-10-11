@@ -141,9 +141,17 @@ protected $revisionCreationsEnabled = true;
 ### Skipping the initial fill
 Models are often created with a few attributes and filled in by later saves, e.g. by an import. Each of those saves records a `null → value` revision, although the value is already known: it is the `old_value` of the next revision of that key, or still the current value.
 
-To skip these revisions, set a window in seconds. While the model is younger than the window (measured from `created_at`, or for the creating instance only if the model has no timestamps), changes from `null` to a value are not recorded. This applies to system saves only, i.e. when `getSystemUserId()` returns `null`; a value filled in by a user is always recorded, so it stays attributable. Changes from one value to another are recorded as usual.
+To skip these revisions, set a window in seconds. While the model is younger than the window (measured from `created_at`; without a `created_at` column only the creating instance qualifies, measured from its creation), changes from `null` to a value are not recorded. This applies to system saves only, i.e. when `getSystemUserId()` returns `null`; a value filled in by a user is always recorded, so it stays attributable. Changes from one value to another are recorded as usual.
 ```php
 protected $revisionInitialFillWindow = 300; // skip null → value revisions during the first 5 minutes
+```
+
+If your system jobs run as a dedicated user (so `getSystemUserId()` is not `null`), override the hook to let them qualify while real users stay audited:
+```php
+protected function revisionInitialFillAppliesToActor(): bool
+{
+    return auth()->user()?->is_system_user ?? true;
+}
 ```
 
 
