@@ -2,6 +2,7 @@
 
 namespace LocalDynamics\Revisionable\Concerns;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Arr;
@@ -28,6 +29,12 @@ trait IsRevisionable
      * @var array<int, array{original: array, dirty: array, dontKeep: array, doKeep: array}>
      */
     private array $revisionStack = [];
+
+    /**
+     * When this instance created the model; bounds the initial fill window for
+     * models without a created_at column.
+     */
+    private ?CarbonInterface $revisionCreatedAt = null;
 
     public static function bootIsRevisionable(): void
     {
@@ -238,23 +245,35 @@ trait IsRevisionable
     /**
      * Whether the model is still in its initial fill window, set in seconds by
      * $revisionInitialFillWindow. Measured from created_at, so it also covers
-     * models re-loaded by a later job; without timestamps only the instance
-     * that created the model counts. Only system saves (no user id) qualify:
-     * a value a user fills in must stay attributable in the audit log.
+     * models re-loaded by a later job; without a created_at column only the
+     * instance that created the model counts, measured from its creation.
      */
     private function withinInitialFillWindow(): bool
     {
         $window = (int) ($this->revisionInitialFillWindow ?? 0);
 
-        if ($window <= 0 || $this->getSystemUserId() !== null) {
+        if ($window <= 0 || ! $this->revisionInitialFillAppliesToActor()) {
             return false;
         }
 
-        if ($this->usesTimestamps() && ($createdAt = $this->{$this->getCreatedAtColumn()})) {
-            return $this->asDateTime($createdAt)->gte(now()->subSeconds($window));
-        }
+        $createdAt = $this->usesTimestamps() && ($column = $this->getCreatedAtColumn())
+            ? $this->{$column}
+            : null;
 
-        return $this->wasRecentlyCreated;
+        $createdAt = $createdAt ? $this->asDateTime($createdAt) : $this->revisionCreatedAt;
+
+        return $createdAt !== null && $createdAt->gte(now()->subSeconds($window));
+    }
+
+    /**
+     * Whether the current actor may skip initial-fill revisions. By default
+     * only system saves (no user id) qualify, so a value a user fills in stays
+     * attributable in the audit log. Override this to also let dedicated
+     * system or import users qualify.
+     */
+    protected function revisionInitialFillAppliesToActor(): bool
+    {
+        return $this->getSystemUserId() === null;
     }
 
     /**
@@ -328,6 +347,8 @@ trait IsRevisionable
 
     public function postCreate(): void
     {
+        $this->revisionCreatedAt = now();
+
         if (! $this->revisionableEnabled()) {
             return;
         }

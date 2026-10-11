@@ -11,6 +11,8 @@ use LocalDynamics\Revisionable\Tests\Models\AuditedInitialFillUser;
 use LocalDynamics\Revisionable\Tests\Models\AuditedUser;
 use LocalDynamics\Revisionable\Tests\Models\ForceDeleteUser;
 use LocalDynamics\Revisionable\Tests\Models\InitialFillUser;
+use LocalDynamics\Revisionable\Tests\Models\NoCreatedAtInitialFillUser;
+use LocalDynamics\Revisionable\Tests\Models\SystemActorInitialFillUser;
 use LocalDynamics\Revisionable\Tests\Models\User;
 use LocalDynamics\Revisionable\Tests\Observers\UserChainObserver;
 use LocalDynamics\Revisionable\Tests\Observers\UserObserverNotPaulUpdater;
@@ -425,6 +427,42 @@ class RevisionTest extends TestCase
         $revision = $user->revisionHistory->sole();
         $this->assertSame('remember_token', $revision->key);
         $this->assertSame(42, $revision->user_id);
+    }
+
+    #[Test]
+    public function initial_fill_by_a_qualifying_system_user_is_not_revisioned()
+    {
+        $user = SystemActorInitialFillUser::create([
+            'name' => 'Peter Parker',
+            'email' => 'peter.parker@revisionable.test',
+            'password' => Hash::make('secret'),
+        ]);
+
+        $user->update(['remember_token' => 'abc', 'name' => 'Spiderman']);
+
+        $revision = $user->revisionHistory->sole();
+        $this->assertSame('name', $revision->key);
+        $this->assertSame(42, $revision->user_id);
+    }
+
+    #[Test]
+    public function initial_fill_window_without_created_at_is_bounded_by_the_creating_instance()
+    {
+        Carbon::setTestNow('2020-01-01 00:00:00');
+        $user = NoCreatedAtInitialFillUser::create([
+            'name' => 'Peter Parker',
+            'email' => 'peter.parker@revisionable.test',
+            'password' => Hash::make('secret'),
+        ]);
+
+        Carbon::setTestNow('2020-01-01 00:04:59');
+        $user->update(['remember_token' => 'abc']);
+
+        Carbon::setTestNow('2020-01-01 00:05:01');
+        $user->update(['email_verified_at' => '2020-01-01 00:05:01']);
+        Carbon::setTestNow();
+
+        $this->assertSame(['email_verified_at'], $user->revisionHistory->pluck('key')->all());
     }
 
     private function createInitialFillUser(): InitialFillUser
