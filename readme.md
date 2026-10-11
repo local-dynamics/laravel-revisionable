@@ -138,6 +138,14 @@ If you want to store the creation as a revision you can override this behavior b
 protected $revisionCreationsEnabled = true;
 ```
 
+### Skipping the initial fill
+Models are often created with a few attributes and filled in by later saves, e.g. by an import. Each of those saves records a `null → value` revision, although the value is already known: it is the `old_value` of the next revision of that key, or still the current value.
+
+To skip these revisions, set a window in seconds. While the model is younger than the window (measured from `created_at`, or for the creating instance only if the model has no timestamps), changes from `null` to a value are not recorded. Changes from one value to another are recorded as usual.
+```php
+protected $revisionInitialFillWindow = 300; // skip null → value revisions during the first 5 minutes
+```
+
 
 ## More Control
 
